@@ -195,6 +195,62 @@ module SC
 
     BUILD_DIRECTIVES_REGEX = /(sc_require|require|sc_resource)\(\s*(['"])(.+)['"]\s*\)/
     
+    # use when module mode is turned on... 
+    # look for lines that are comments or directives only.  must start with
+    # //, /* or "
+    END_BLOCK_COMMENT_REGEX    = /\s*\*\//
+    BEGIN_BLOCK_COMMENT_REGEX  = /\s*\/\*/
+    COMMENT_OR_DIRECTIVE = /^\s*((['"])(.+?)(\2)\s*;)?\s*(\/[\/\*].+)?\s*$/ 
+        
+    def scan_module(&block)
+      
+      # prep entries
+      if entries = self.source_entries
+        entries.each { |entry| entry.stage! }
+      end
+
+      if paths = self.source_paths
+        paths.each do |path|
+          next unless File.exist?(path)
+          state = :start
+          File.readlines(path).each do |line|
+            case state
+            when :start
+              
+              # line has a build directive or comment - its OK
+              results = line.scan(COMMENT_OR_DIRECTIVE)
+              if results && results.size > 0
+                
+                # handle build directive
+                if directive = results[0][2]
+                  args = directive.split(' ')
+                  directive = args.shift
+                  yield(directive, args)
+                end
+                
+                # handle start of block comment
+                if results[0][4] =~ /^\/\*.*[^\*\/]\s*$/
+                  state = :block
+                end
+                
+              else
+                state = :code # beyond start of file
+              end
+            
+            # while in block just look for closing block statement
+            when :block
+              if line =~ /\*\//
+                state = (line =~ /\*\/\s*(\/\/.*)?$/) ? :start : :code
+              end
+            
+            when :code
+              break # nothing to do
+            end
+          end
+        end
+      end
+    end
+    
     # Scans the source paths for standard build directives and annotates the
     # entry accordingly.  You should only call this method on entries 
     # representing CSS or JavaScript resources.  It will yield undefined
@@ -206,21 +262,98 @@ module SC
       
       self.required = []
       entry = self.transform? ? self.source_entry : self
-      entry.scan_source(BUILD_DIRECTIVES_REGEX) do |matches|
-        # strip off any file ext
-        filename = matches[2].ext ''
-        case matches[0]
-        when 'sc_require'
-          self.required << filename
-        when 'require'
-          self.required << filename
-        when 'sc_resource'
-          self.resource = filename
+      
+      # use new module parser
+      if self.use_modules && self.entry_type == :javascript
+        
+        self.imports = []
+        self.exports = []
+        bundle_name = self.target.bundle_name
+        
+        entry.scan_module do |directive, args|
+          directive = directive.to_s.downcase.gsub(/^\s+/,'').gsub(/\s+$/,'')
+          case directive 
+          when 'resource'
+            self.resource = (args.first || '').ext 
+          
+          when 'import'
+            # normalize.  if no explicit target, assume local
+            args = args.map { |a| a =~ /:/ ? a : [bundle_name,a].join(':') }
+            self.imports += args
+            
+          when 'export'
+            self.exports += args
+            
+          end
         end
+        
+        self.imports = self.imports.compact.uniq
+        self.exports = self.exports.compact.uniq
+        
+      # legacy directives for non-module loading and CSS files
+      else
+        entry.scan_source(BUILD_DIRECTIVES_REGEX) do |matches|
+          # strip off any file ext
+          filename = matches[2].ext ''
+          case matches[0]
+          when 'sc_require'
+            self.required << filename
+          when 'require'
+            self.required << filename
+          when 'sc_resource'
+            self.resource = filename
+          end
+        end
+        
       end
       
       target.end_attr_changes
       
+    end
+    
+    def module_preamble
+      return '' if !self.use_modules
+      lines = []
+      
+      # import symbols from other modules
+      self.imports.each do |import|
+        bundle_name, module_name = import.split(':')
+        bundle_target = self.target.target_for(bundle_name)
+        if bundle_target
+          next if !bundle_target.use_modules
+          bundle_manifest = bundle_target.manifest_for(self.manifest.variation).build!
+          module_entry = bundle_manifest.entries.find do |e| 
+            e.module_name == module_name
+          end
+
+          if module_entry && (module_exports = module_entry.exports).size>0
+            lines << "var $m__ = require('#{bundle_name}','#{module_name}'), #{module_exports.map { |s| "#{s}=$m__.#{s}" }.join(',')};"
+          else
+            SC.logger.warn("cannot find module to import #{import}")
+          end
+            
+        else
+          SC.logger.warn("cannot find target to import #{import}")
+        end
+        
+      end
+      
+      # setup export variables
+      if self.exports.size>0
+        lines << "var #{self.exports.join(',')};"
+      end
+      
+      return lines * ''
+      
+    end
+    
+    def module_postamble 
+      return '' if !self.use_modules
+      lines = []
+      self.exports.each do |export|
+        lines << "exports.#{export} = #{export};\n"
+      end
+      return lines * ''
     end
     
     ######################################################

@@ -56,6 +56,7 @@ namespace :target do
     
     # The target is loadable if it is an app
     TARGET.loadable = TARGET.target_type == :app
+    TARGET.use_modules = CONFIG.use_modules
   end
   
 end

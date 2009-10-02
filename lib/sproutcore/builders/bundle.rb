@@ -8,16 +8,6 @@
 require File.expand_path(File.join(File.dirname(__FILE__), 'base'))
 
 module SC
-
-  # Builds a bundle_loaded.js file which MUST be the last JavaScript to load
-  # in a framework.
-  class Builder::BundleLoaded < Builder::Base
-    
-    def build(dst_path)
-      writelines dst_path, ["; if ((typeof SC !== 'undefined') && SC && SC.bundleDidLoad) SC.bundleDidLoad('#{entry.target.target_name.to_s.sub(/^\//,'')}');"]
-    end
-    
-  end
   
   # Builds a bundle_info.js file which MUST be run *before* the framework is 
   # loaded by the application or framework doing the loading.
@@ -25,37 +15,48 @@ module SC
     
     def build(dst_path)
       begin
-        require 'erubis'
+        require 'json'
       rescue
-        raise "Cannot render bundle_info.js because erubis is not installed. Try running 'sudo gem install erubis' and try again."
+        raise "Cannot render bundle_info.js because json is not installed. Try running 'sudo gem install json' and try again."
       end
       
-      eruby = Erubis::Eruby.new <<-EOT
-        ;(function() {
-          var target_name = '<%= @target_name %>' ;
-          if (!SC.BUNDLE_INFO) throw "SC.BUNDLE_INFO is not defined!" ;
-          if (SC.BUNDLE_INFO[target_name]) return ; <%# not an error... %>
-          
-          <%# first time, so add a Hash with this target's bundle_info %>
-          SC.BUNDLE_INFO[target_name] = {
-            requires: [<%= @requires.join(',') %>],
-            styles:   [<%= @styles.join(',') %>],
-            scripts:  [<%= @scripts.join(',') %>]
-          }
-        })();
-      EOT
+      # emit a bundle definition for the current target
+      bundle_name = entry.manifest.bundle_name
+      desc = entry.manifest.bundle_info
+      lines = []
+      lines << ";sc_loader.bundle('#{bundle_name}', #{desc.to_json});\n"
+      lines << "sc_loader.script('#{entry.cacheable_url}');\n"
       
-      output = ""
-      entry.targets.each do |t|
-        bundle_info = t.bundle_info({ :debug => entry.debug, :test => entry.test, :theme => entry.theme, :variation => entry.variation })
-        output << eruby.evaluate({
-          :target_name => t.target_name.to_s.sub(/^\//,''),
-          :requires => bundle_info.requires.map{ |t| "'#{t.target_name.to_s.sub(/^\//,'')}'" },
-          :styles   => bundle_info.css_urls.map{ |url| "'#{url}'" },
-          :scripts  => bundle_info.js_urls.map{  |url| "'#{url}'" }
-        })
+      writelines dst_path, lines
+    end
+    
+  end
+
+  # Builds a module_exports.js file defines all exports for a module for 
+  # general use
+  class Builder::ModuleExports < Builder::Base
+    
+    def build(dst_path)
+      
+      entries = entry.source_entries.reject { |e| e.exports.nil? }
+      
+      bundle_name = entry.target.bundle_name
+      
+      lines = []
+      lines << "sc_loader.module('#{bundle_name}', 'exports', function(require, exports, module) {\n"
+      lines << "var module;\n"
+      entries.each do |e| 
+        next if e.exports.size == 0
+        
+        lines << "module = require('#{bundle_name}', '#{e.module_name}');\n"
+        e.exports.each do |exp|
+          lines << "exports.#{exp} = module.#{exp};\n"
+        end
       end
-      writelines dst_path, [output]
+      
+      lines << "});\n"
+      lines << "sc_loader.script('#{entry.cacheable_url}');"
+      writelines dst_path, lines
     end
     
   end
