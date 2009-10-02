@@ -85,6 +85,10 @@ mode :all do
 		# API, will be set up to be lazily instantiated when loaded.
 		:lazy_instantiation => false,
     
+    # indicates that you want to include bundle loading code.  this is almost
+    # always a setting you want to leave enabled
+    :use_loader => true,
+    
     # if set to true then the index.html will build into the global language
     # and target directory.  This can interfere with deploying multiple builds
     # at one but it is more convenient.

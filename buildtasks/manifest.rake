@@ -136,7 +136,7 @@ namespace :manifest do
   namespace :prepare_build_tasks do
     
     desc "main entrypoint for preparing all build tasks.  This should invoke all needed tasks"
-    task :all => %w(css javascript bundle_info bundle_loaded sass scss less combine minify html strings tests packed) 
+    task :all => %w(css javascript sass scss less combine minify html strings tests packed) 
 
     desc "executes prerequisites needed before one of the subtasks can be invoked.  All subtasks that have this as a prereq"
     task :setup => %w(manifest:catalog manifest:hide_buildfiles manifest:localize)
@@ -204,9 +204,11 @@ namespace :manifest do
       entries.each do |entry|
         entry = MANIFEST.add_transform entry,
           :lazy_instantiation => CONFIG.lazy_instantiation,
-          :notify_onload => !CONFIG.combine_javascript,
-          :filename   => ['source', entry.filename].join('/'),
-          :build_path => File.join(MANIFEST.build_root, 'source', entry.filename),
+          :notify_onload => CONFIG.use_loader,
+          :filename      => ['source', entry.filename].join('/'),
+          :module_name   => entry.filename.ext,
+          :use_modules   => CONFIG.use_modules,
+          :build_path    => File.join(MANIFEST.build_root, 'source', entry.filename),
           :url => [MANIFEST.url_root, 'source', entry.filename].join("/"),
           :build_task => 'build:javascript',
           :resource   => 'javascript',
@@ -237,98 +239,105 @@ namespace :manifest do
       end
     end
     
-    desc "adds a bundle_info.js entry for each dynamic_required target"
-    task :bundle_info => %w(setup) do
-      
-      # Populate bundle_info for all dynamic_required frameworks.
-      # Add :debug_dynamic_required and :test_dynamic_required depending on 
-      # the build mode.
-      debug = CONFIG.load_debug
-      test = CONFIG.load_tests
-      
-      targets = TARGET.dynamic_required_targets({ :debug => debug, :test => test, :theme => true })
-      unless targets.size == 0
-        source_entries = []
-        targets.each do |t|
-          t.manifest_for(MANIFEST.variation).build!.entries.each do |e|
-            source_entries << e
-          end
-        end
-        MANIFEST.add_entry 'bundle_info.js',
-          :dynamic        => true, # required to get correct timestamp for cacheable_url
-          :build_task     => 'build:bundle_info',
-          :resource       => 'javascript',
-          :entry_type     => :javascript,
-          :composite      => true,
-          :source_entries => source_entries,
-          :target         => TARGET,
-          :targets        => targets,
-          :variation      => MANIFEST.variation,
-          :debug          => debug,
-          :test           => test,
-          :theme          => true
-      end
-    end
-    task :bundle_info => :tests # IMPORTANT! to avoid JS including unit tests.
-      
-    desc "adds a bundle_loaded.js entry if the target is a framework"
-    task :bundle_loaded => %w(setup) do
-      
-      if TARGET.target_type == :framework
-        MANIFEST.add_entry 'bundle_loaded.js',
-          :build_task  => 'build:bundle_loaded',
-          :resource    => 'javascript',
-          :entry_type  => :javascript,
-          :composite   => true, # does not have a source
-          :source_entries => [],
-          :target      => TARGET
-      end
-      
-    end
-    task :bundle_loaded => :tests # IMPORTANT! to avoid JS including unit tests.
-      
     desc "generates combined entries for javascript and css"
-    task :combine => %w(setup css javascript bundle_info bundle_loaded sass scss less) do
+    task :combine => %w(setup css javascript sass scss less) do
 
       # sort entries...
       css_entries = {}
       javascript_entries = {}
+      final_css_entries = {}
       MANIFEST.entries.each do |entry|
+
         # we can only combine entries with a resource property.
         next if entry.resource.nil?
+
+        # normalize entry names.  remove default extension
+        full_name = entry.resource.to_s
+        base_name = full_name.ext
         
         # look for CSS or JS type entries
         case entry.entry_type
         when :css
-          (css_entries[entry.resource] ||= []) << entry
+          full_name = base_name if full_name == base_name.ext('css')
+          (css_entries[full_name] ||= []) << entry
         when :javascript
-          (javascript_entries[entry.resource] ||= []) << entry
+          full_name = base_name if full_name == base_name.ext('js')
+          (javascript_entries[full_name] ||= []) << entry
         end
       end
 
       # build combined CSS entry
       css_entries.each do |resource_name, entries|
-        MANIFEST.add_composite resource_name.ext('css'),
+        
+        if (resource_name == resource_name.ext)
+          entry_name = resource_name.ext('css')
+        else
+          entry_name = resource_name
+        end
+        
+        entry = MANIFEST.add_composite entry_name,
           :build_task      => 'build:combine',
           :source_entries  => entries,
           :hide_entries    => CONFIG.combine_stylesheets,
           :ordered_entries => SC::Helpers::EntrySorter.sort(entries),
           :entry_type      => :css,
           :combined        => true
+
+      end
+      
+      # if NO js is defined forthe default but the loader is in use, we
+      # need to generate the bundle_info.js and javascript.js anyway
+      if javascript_entries['javascript'].nil? && CONFIG.use_loader
+        javascript_entries['javascript'] = []
       end
       
       # build combined JS entry
       javascript_entries.each do |resource_name, entries|
-        resource_name = resource_name.ext('js')
-        pf = (resource_name == 'javascript.js') ? %w(source/lproj/strings.js source/core.js source/utils.js) : []
-        MANIFEST.add_composite resource_name,
+
+        if (resource_name == resource_name.ext)
+          entry_name = resource_name.ext('js')
+        else
+          entry_name = resource_name
+        end
+        
+        # sort entries
+        pf = (entry_name == 'javascript.js') ? %w(source/lproj/strings.js source/core.js source/utils.js) : []
+        ordered_entries = SC::Helpers::EntrySorter.sort(entries, pf)
+
+        # add a bundle_info.js if needed
+        if CONFIG.use_loader
+          bundle_info = MANIFEST.add_entry 'bundle_info.js',
+            :build_task      => 'build:bundle_info',
+            :resource        => resource_name,
+            :entry_type      => :javascript,
+            :source_entries  => entries.dup
+            
+          entries << bundle_info
+          ordered_entries.unshift(bundle_info) # load first
+        end
+        
+        # if we're using modules, then add a generated entries module as well
+        has_exports = !!entries.find { |e| e.module_name == 'exports' }
+        if CONFIG.use_modules && !has_exports
+          module_exports = MANIFEST.add_entry 'module_exports.js',
+            :build_task      => 'build:module_exports',
+            :resource        => resource_name,
+            :entry_type      => :javascript,
+            :source_entries  => entries.dup,
+            :module_name     => 'exports'
+          entries << module_exports
+          ordered_entries.unshift(module_exports)
+        end
+          
+        MANIFEST.add_composite entry_name,
           :build_task      => 'build:combine',
           :source_entries  => entries,
           :top_level_lazy_instantiation => CONFIG.lazy_instantiation, 
           :hide_entries    => CONFIG.combine_javascript,
-          :ordered_entries => SC::Helpers::EntrySorter.sort(entries, pf),
+          :ordered_entries => ordered_entries,
           :entry_type      => :javascript,
-          :combined        => true
+          :combined        => true,
+          :notify_onload   => CONFIG.use_loader
       end
       
     end
@@ -514,7 +523,7 @@ namespace :manifest do
     end
     
     desc "creates transform entries for all css and Js entries to minify them if needed"
-    task :minify => %w(setup javascript bundle_info bundle_loaded css combine sass scss less) do
+    task :minify => %w(setup javascript css combine sass scss less) do
       
       minify_css = CONFIG.minify_css
       minify_css = CONFIG.minify if minify_css.nil?
@@ -548,7 +557,7 @@ namespace :manifest do
     end
 
     desc "adds a loc strings entry that generates a yaml file server-side functions can use" 
-    task :strings => %w(setup javascript bundle_info bundle_loaded) do
+    task :strings => %w(setup javascript) do
       # find the lproj/strings.js file...
       if entry = (MANIFEST.entry_for('source/lproj/strings.js') || MANIFEST.entry_for('source/lproj/strings.js', :hidden => true))
         MANIFEST.add_transform entry, 

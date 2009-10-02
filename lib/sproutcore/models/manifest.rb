@@ -348,6 +348,152 @@ module SC
       return ret
     end
     
+    ###############################################################
+    # BUNDLE INFO
+    #
+    
+    def bundle_name 
+      target.bundle_name
+    end
+    
+    # Returns a HashStruct with a valid bundle_info for the bundle that you
+    # can put inside a bundle_info.js.  This has info on loading the main
+    # javascript.js and stylesheet.css resources for the bundle ONLY.
+    #
+    # === Options
+    #  :scripts     => true to include dependent scripts (def true)
+    #  :stylesheets => true to include dependent stylesheets (def true)
+    #  :depends     => true to include dependencies and defs for bundles  
+    #
+    def bundle_info(opts ={})
+      
+      bundle_info = {} # here is what we will build
+      
+      build! # make sure we are ready...
+      
+      # get scripts
+      if opts[:scripts].nil? || opts[:scripts]
+        should_combine = target.config.combine_javascript
+        e = entry_for('javascript.js') || entry_for('javascript.js', :hidden => true)
+        scripts = e.nil? ? [] : (should_combine ? [e] : e.ordered_entries)
+        scripts ||= []
+        scripts = scripts.compact.map { |e| e.cacheable_url }.compact
+        bundle_info['scripts'] = scripts if scripts.size>0
+      end
+
+      if opts[:stylesheets].nil? || opts[:stylesheets]
+        should_combine = target.config.combine_stylesheet
+        e = entry_for('stylesheet.css') || entry_for('stylesheet.css', :hidden => true)
+        stylesheets = e.nil? ? [] : (should_combine ? [e] : e.ordered_entries)
+        stylesheets ||= []
+        stylesheets = stylesheets.compact.map { |e| e.cacheable_url }.compact
+        bundle_info['stylesheets'] = stylesheets if stylesheets.size>0
+      end
+      
+      if opts[:depends].nil? || opts[:depends]
+        
+        t_opts = { 
+          :debug => target.config.load_debug,  
+          :tests => target.config.load_tests,
+          :theme => true 
+        }
+        
+        # get all required target names.  these go in the depends hash
+        targets = target.required_targets(t_opts) || []
+        depends = targets.map { |t| t.bundle_name }.compact
+        bundle_info['depends'] = depends if depends.size>0
+        
+        # expand to include dynamic required target and build bundle info 
+        # also
+        targets += target.dynamic_required_targets(t_opts) || []
+        targets = targets.compact.uniq.reject { |t| t == target }
+        if targets.size > 0
+          bundles = {}
+          targets.each do |t|
+            bundles[t.bundle_name] = 
+              t.manifest_for(self.variation).bundle_info(:depends => false)
+          end
+          bundle_info['bundles'] = bundles
+        end
+      end
+        
+      return bundle_info
+      
+      #####
+      if target_type == :app
+        raise "bundle_info called on an app target"
+      else
+        requires = required_targets(opts) # only go one-level deep!
+        
+        # Targets that aren't pre-loaded can't be packed together. That leaves
+        # loading css and js individually and/or loading the combined or 
+        # minified css and js.
+        combine_css = config.combine_stylesheets
+        combine_js  = config.combine_javascript
+        minify_css  = config.minify_css
+        minify_css  = config.minify if minify_css.nil?
+        minify_js   = config.minify_javascript
+        minify_js   = config.minify if minify_js.nil?
+        pack_css    = config.use_packed
+        pack_js     = config.use_packed
+        
+        # sort entries...
+        css_entries = {}
+        javascript_entries = {}
+         manifest_for(opts[:variation]).build!.entries.each do |entry|
+          if entry.resource.nil?
+            entry.resource = ''
+          end
+          
+          # look for CSS or JS type entries
+          case entry.entry_type
+          when :css
+            (css_entries[entry.resource] ||= []) << entry
+          when :javascript
+            (javascript_entries[entry.resource] ||= []) << entry
+          end
+        end
+        
+        css_urls = []
+        css_entries.each do |resource_name, entries|
+          SC::Helpers::EntrySorter.sort(entries).each do |entry|
+            if minify_css && entry.minified
+              css_urls << entry.cacheable_url
+            elsif pack_css && entry.packed && !entry.minified
+              css_urls << entry.cacheable_url
+            elsif combine_css && entry.combined && !entry.packed && !entry.minified
+              css_urls << entry.cacheable_url
+            elsif !entry.combined && !entry.packed && !entry.minified
+              css_urls << entry.cacheable_url
+            end
+          end
+        end
+        
+        js_urls = []
+        javascript_entries.each do |resource_name, entries|
+          resource_name = resource_name.ext('js')
+          pf = (resource_name == 'javascript.js') ? %w(source/lproj/strings.js source/core.js source/utils.js) : []
+          SC::Helpers::EntrySorter.sort(entries, pf).each do |entry|
+            if minify_js && entry.minified
+              js_urls << entry.cacheable_url
+            elsif pack_js && entry.packed && !entry.minified
+              js_urls << entry.cacheable_url
+            elsif combine_js && entry.combined && !entry.packed && !entry.minified
+              js_urls << entry.cacheable_url
+            elsif !entry.combined && !entry.packed && !entry.minified
+              js_urls << entry.cacheable_url
+            end
+          end
+        end
+        
+        SC::HashStruct.new :requires => requires, :css_urls => css_urls, :js_urls => js_urls
+      end
+    end
+    
+    ###############################################################
+    # PATH UTILS
+    #
+    
     # Finds a unique staging path starting with the root proposed staging
     # path.
     def unique_staging_path(path)
