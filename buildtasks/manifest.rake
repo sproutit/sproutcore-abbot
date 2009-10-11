@@ -317,14 +317,14 @@ namespace :manifest do
         end
         
         # if we're using modules, then add a generated entries module as well
-        has_exports = !!entries.find { |e| e.module_name == 'exports' }
+        has_exports = !!entries.find { |e| e.module_name == 'package' }
         if CONFIG.use_modules && !has_exports
-          module_exports = MANIFEST.add_entry 'module_exports.js',
-            :build_task      => 'build:module_exports',
+          module_exports = MANIFEST.add_entry 'package_exports.js',
+            :build_task      => 'build:package_exports',
             :resource        => resource_name,
             :entry_type      => :javascript,
             :source_entries  => entries.dup,
-            :module_name     => 'exports'
+            :module_name     => 'package'
           entries << module_exports
           ordered_entries.unshift(module_exports)
         end

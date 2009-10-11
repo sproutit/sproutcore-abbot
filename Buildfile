@@ -88,6 +88,13 @@ mode :all do
     # indicates that you want to include bundle loading code.  this is almost
     # always a setting you want to leave enabled
     :use_loader => true,
+
+    # Actives module loading.  Currently off by default.  If you enable the 
+    # loader, you may also choose the name of the loader that will be used.
+    # defaults to "tiki".
+    :use_modules => false,
+    :module_loader => 'tiki',
+    
     
     # if set to true then the index.html will build into the global language
     # and target directory.  This can interfere with deploying multiple builds
@@ -116,7 +123,11 @@ mode :debug do
     :combine_stylesheets => true,
     
     :minify_javascript => false,
+<<<<<<< HEAD
 		:minify_css => false,
+=======
+    :minify_css => false,
+>>>>>>> Changes to work with tiki module loader
     
     :build_prefix => 'tmp/debug/build',
     :staging_prefix => 'tmp/debug/staging',

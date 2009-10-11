@@ -413,7 +413,7 @@ module SC
             bundles[t.bundle_name] = 
               t.manifest_for(self.variation).bundle_info(:depends => false)
           end
-          bundle_info['bundles'] = bundles
+          bundle_info['packages'] = bundles
         end
       end
         
