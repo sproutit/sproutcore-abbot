@@ -85,8 +85,8 @@ namespace :build do
   end
   
   desc "builds a module entries entry"
-  build_task :module_exports do # defined in bundle.js
-    SC::Builder::ModuleExports.build ENTRY, DST_PATH
+  build_task :package_exports do # defined in bundle.js
+    SC::Builder::PackageExports.build ENTRY, DST_PATH
   end
   
   

@@ -277,12 +277,31 @@ module SC
             self.resource = (args.first || '').ext 
           
           when 'import'
-            # normalize.  if no explicit target, assume local
-            args = args.map { |a| a =~ /:/ ? a : [bundle_name,a].join(':') }
-            self.imports += args
+            # handle import foo as bar
+            if args.size == 3 && args[1] == 'as'
+              a = args[0]
+              a = (a =~ /:/ ? a : [bundle_name,a].join(':'))
+              self.imports << [a, args[2]]
+              
+            else
+              # normalize.  if no explicit target, assume local
+              args.each do |a|
+                a = (a =~ /:/ ? a : [bundle_name,a].join(':'))
+                self.imports << [a, '*']
+              end
+            end
             
           when 'export'
+            if args.first == 'package'
+              args.shift # remove package directive
+              self.package_exports = [] if self.package_exports.nil?
+              self.package_exports += args
+            end
+            
             self.exports += args
+            
+          when 'use'
+            self.use_modules = (args[1] != 'false') if args[0] == 'modules'
             
           end
         end
@@ -311,23 +330,52 @@ module SC
       
     end
     
+    def exports
+      ret = self[:exports]
+      if ret.nil? && (self.build_task == 'build:package_exports')
+        ret = []
+        (self.source_entries || []).each do |e|
+          ret += (e.package_exports || [])
+        end
+        ret = ret.compact.uniq
+      end
+      return ret
+    end
+    
+    def exports=(exp) 
+      self[:exports] = exp
+    end
+    
     def module_preamble
       return '' if !self.use_modules
       lines = []
       
       # import symbols from other modules
       self.imports.each do |import|
+        import, as_symbol = import # split array
         bundle_name, module_name = import.split(':')
         bundle_target = self.target.target_for(bundle_name)
+        
+        puts "IMPORT: import=#{import} as_symbol=#{as_symbol}"
         if bundle_target
           next if !bundle_target.use_modules
+          
           bundle_manifest = bundle_target.manifest_for(self.manifest.variation).build!
           module_entry = bundle_manifest.entries.find do |e| 
             e.module_name == module_name
           end
+          
+          if module_entry
+            if as_symbol != '*' 
+              lines << "var #{as_symbol} = require('#{bundle_name}','#{module_name}');"
+              
+            elsif (module_exports = module_entry.exports).size>0
+              lines << "var $m__ = require('#{bundle_name}','#{module_name}'), #{module_exports.map { |s| "#{s}=$m__.#{s}" }.join(',')};"
+              
+            else
+              lines << "require('#{bundle_name}', '#{module_name}');"
+            end
 
-          if module_entry && (module_exports = module_entry.exports).size>0
-            lines << "var $m__ = require('#{bundle_name}','#{module_name}'), #{module_exports.map { |s| "#{s}=$m__.#{s}" }.join(',')};"
           else
             SC.logger.warn("cannot find module to import #{import}")
           end
@@ -349,7 +397,7 @@ module SC
     
     def module_postamble 
       return '' if !self.use_modules
-      lines = []
+      lines = [';'] # always add semicolon in case module code is missing one
       self.exports.each do |export|
         lines << "exports.#{export} = #{export};\n"
       end

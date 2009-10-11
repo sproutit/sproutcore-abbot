@@ -36,10 +36,12 @@ SC.LAZY_INSTANTIATION['#{target_name}'].push(
 
       lines << readlines(entry.source_path).map { |l| rewrite_inline_code(l) }
 
+      loader_name = entry.target.config.module_loader
+      
       # Wrap in a module if enabled
       if entry.use_modules
         lines.unshift entry.module_preamble
-        lines.unshift "sc_loader.module('#{entry.manifest.bundle_name}', '#{entry.module_name}', function(require, exports, module) {"
+        lines.unshift "#{loader_name}.module('#{entry.manifest.bundle_name}', '#{entry.module_name}', function(require, exports, module) {"
 
         lines << entry.module_postamble
         lines << "\n});\n"
@@ -47,7 +49,7 @@ SC.LAZY_INSTANTIATION['#{target_name}'].push(
       
       # Try to load dependencies if we're not combining javascript.
       if entry.notify_onload && !entry.target.config.combine_javascript
-        lines << "; sc_loader.script('#{entry.cacheable_url}');"
+        lines << "; #{loader_name}.script('#{entry.cacheable_url}');"
       end
 
       if entry.lazy_instantiation && entry.notify_onload
