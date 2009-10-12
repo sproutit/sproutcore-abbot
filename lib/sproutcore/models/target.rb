@@ -455,7 +455,7 @@ module SC
     
     # Returns the bundle name.  this is the target name without the leading
     # slash
-    def bundle_name
+    def package_name
       target_name.to_s[1..-1]
     end
     

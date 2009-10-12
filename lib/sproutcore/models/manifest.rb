@@ -352,8 +352,8 @@ module SC
     # BUNDLE INFO
     #
     
-    def bundle_name 
-      target.bundle_name
+    def package_name 
+      target.package_name
     end
     
     # Returns a HashStruct with a valid bundle_info for the bundle that you
@@ -400,7 +400,7 @@ module SC
         
         # get all required target names.  these go in the depends hash
         targets = target.required_targets(t_opts) || []
-        depends = targets.map { |t| t.bundle_name }.compact
+        depends = targets.map { |t| t.package_name }.compact
         bundle_info['depends'] = depends if depends.size>0
         
         # expand to include dynamic required target and build bundle info 
@@ -410,7 +410,7 @@ module SC
         if targets.size > 0
           bundles = {}
           targets.each do |t|
-            bundles[t.bundle_name] = 
+            bundles[t.package_name] = 
               t.manifest_for(self.variation).bundle_info(:depends => false)
           end
           bundle_info['packages'] = bundles

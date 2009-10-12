@@ -18,7 +18,7 @@ module SC
       # required by the named bundle.  If you pass no options, the current
       # client will be used.
       #
-      # bundle_name = the name of the bundle to render or nil to use the
+      # package_name = the name of the bundle to render or nil to use the
       # current :language => the language to render. defaults to current
       # language
       #

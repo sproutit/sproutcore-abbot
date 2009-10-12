@@ -80,8 +80,8 @@ namespace :build do
   end
   
   desc "builds the bundle_info.js file for a required framework"
-  build_task :bundle_info do
-    SC::Builder::BundleInfo.build ENTRY, DST_PATH
+  build_task :package_info do
+    SC::Builder::PackageInfo.build ENTRY, DST_PATH
   end
   
   desc "builds a module entries entry"

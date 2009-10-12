@@ -256,7 +256,7 @@ module SC
     # representing CSS or JavaScript resources.  It will yield undefined
     # results on all other file types.
     #
-    def discover_build_directives!
+    def discover_build_directives!(force = false)
       
       target.begin_attr_changes
       
@@ -264,11 +264,11 @@ module SC
       entry = self.transform? ? self.source_entry : self
       
       # use new module parser
-      if self.use_modules && self.entry_type == :javascript
+      if self.use_modules && (force || (self.entry_type == :javascript))
         
         self.imports = []
         self.exports = []
-        bundle_name = self.target.bundle_name
+        package_name = self.target.package_name
         
         entry.scan_module do |directive, args|
           directive = directive.to_s.downcase.gsub(/^\s+/,'').gsub(/\s+$/,'')
@@ -280,29 +280,51 @@ module SC
             # handle import foo as bar
             if args.size == 3 && args[1] == 'as'
               a = args[0]
-              a = (a =~ /:/ ? a : [bundle_name,a].join(':'))
+              a = (a =~ /:/ ? a : [package_name,a].join(':'))
               self.imports << [a, args[2]]
-              
+
             else
               # normalize.  if no explicit target, assume local
               args.each do |a|
-                a = (a =~ /:/ ? a : [bundle_name,a].join(':'))
+                a = (a =~ /:/ ? a : [package_name,a].join(':'))
                 self.imports << [a, '*']
               end
             end
             
           when 'export'
-            if args.first == 'package'
-              args.shift # remove package directive
+            
+            is_global  = args.first == 'global'
+            is_package = is_global || (args.first == 'package')
+            args.shift if is_global || is_package
+            
+            # convert to tuples; import/export names
+            if args.size == 3 && args[1] == 'as'
+              args = [[args[0], args[2]]]
+            else
+              args = args.map { |a| [a, a] }
+            end
+            
+            # save in global exports if needed
+            if is_global
+              self.global_exports = [] if self.global_exports.nil?
+              self.global_exports += args
+            end
+            
+            # save in package exports if needed
+            if is_package
               self.package_exports = [] if self.package_exports.nil?
               self.package_exports += args
             end
-            
+
+            # save regular exports always
             self.exports += args
             
           when 'use'
             self.use_modules = (args[1] != 'false') if args[0] == 'modules'
+            self.use_loader = (args[1] != 'false') if args[0] == 'loader'
             
+          when 'require'
+            self.required += args
           end
         end
         
@@ -353,8 +375,8 @@ module SC
       # import symbols from other modules
       self.imports.each do |import|
         import, as_symbol = import # split array
-        bundle_name, module_name = import.split(':')
-        bundle_target = self.target.target_for(bundle_name)
+        package_name, module_name = import.split(':')
+        bundle_target = self.target.target_for(package_name)
         
         puts "IMPORT: import=#{import} as_symbol=#{as_symbol}"
         if bundle_target
@@ -367,13 +389,13 @@ module SC
           
           if module_entry
             if as_symbol != '*' 
-              lines << "var #{as_symbol} = require('#{bundle_name}','#{module_name}');"
+              lines << "var #{as_symbol} = require('#{package_name}','#{module_name}');"
               
             elsif (module_exports = module_entry.exports).size>0
-              lines << "var $m__ = require('#{bundle_name}','#{module_name}'), #{module_exports.map { |s| "#{s}=$m__.#{s}" }.join(',')};"
+              lines << "var $m__ = require('#{package_name}','#{module_name}'), #{module_exports.map { |s| "#{s[1]}=$m__.#{s[1]}" }.join(',')};"
               
             else
-              lines << "require('#{bundle_name}', '#{module_name}');"
+              lines << "require('#{package_name}', '#{module_name}');"
             end
 
           else
@@ -388,7 +410,7 @@ module SC
       
       # setup export variables
       if self.exports.size>0
-        lines << "var #{self.exports.join(',')};"
+        lines << "var #{self.exports.map { |x| x[0].split('.').first }*','};"
       end
       
       return lines * ''
@@ -399,7 +421,7 @@ module SC
       return '' if !self.use_modules
       lines = [';'] # always add semicolon in case module code is missing one
       self.exports.each do |export|
-        lines << "exports.#{export} = #{export};\n"
+        lines << "exports.#{export[1]} = #{export[0]};\n"
       end
       return lines * ''
     end

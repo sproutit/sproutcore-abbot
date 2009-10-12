@@ -11,7 +11,7 @@ module SC
   
   # Builds a bundle_info.js file which MUST be run *before* the framework is 
   # loaded by the application or framework doing the loading.
-  class Builder::BundleInfo < Builder::Base
+  class Builder::PackageInfo < Builder::Base
     
     def build(dst_path)
       begin
@@ -22,11 +22,14 @@ module SC
       
       # emit a bundle definition for the current target
       loader_name = entry.target.config.module_loader
-      bundle_name = entry.manifest.bundle_name
+      package_name = entry.manifest.package_name
       desc = entry.manifest.bundle_info
       lines = []
-      lines << ";#{loader_name}.bundle('#{bundle_name}', #{desc.to_json});\n"
-      lines << "#{loader_name}.script('#{entry.cacheable_url}');\n"
+      lines << ";#{loader_name}.register('#{package_name}', #{desc.to_json});\n"
+      
+      if !entry.target.config.combine_javascript
+        lines << "#{loader_name}.script('#{entry.cacheable_url}');\n"
+      end
       
       writelines dst_path, lines
     end
@@ -41,25 +44,25 @@ module SC
       
       entries = entry.source_entries.reject { |e| e.exports.nil? }
       
-      bundle_name = entry.target.bundle_name
+      package_name = entry.target.package_name
       loader_name = entry.target.config.module_loader
       
       has_main = false
       
       lines = []
-      lines << "#{loader_name}.module('#{bundle_name}', 'package', function(require, exports, module) {\n"
+      lines << "#{loader_name}.module('#{package_name}', 'package', function(require, exports, module) {\n"
       lines << "var m;\n"
       entries.each do |e| 
         next if e.package_exports.nil?
         
         if e.package_exports && e.package_exports.size>0
-          lines << "m = require('#{bundle_name}', '#{e.module_name}');\n"
+          lines << "m = require('#{package_name}', '#{e.module_name}');\n"
           e.package_exports.each do |exp|
-            lines << "exports.#{exp} = m.#{exp};\n"
-            has_main = true if exp == 'main'
+            lines << "exports.#{exp[1]} = m.#{exp[1]};\n"
+            has_main = true if exp[1] == 'main'
           end
         else
-          lines << "require('#{bundle_name}', '#{e.module_name}');\n"
+          lines << "require('#{package_name}', '#{e.module_name}');\n"
         end
         
       end
@@ -69,10 +72,14 @@ module SC
       # if this is a loadable target (i.e. an app), and a main() is defined,
       # then try to call it automatically when the package becomes ready.
       if entry.target.loadable?
-        lines << "\n#{loader_name}.load('#{bundle_name}').then(function() {\n  #{loader_name}.require('#{bundle_name}','package').main();\n});\n\n"
+        lines << "\n#{loader_name}.load('#{package_name}').then(function() {\n  #{loader_name}.require('#{package_name}','package').main();\n});\n\n"
       end
       
-      lines << "#{loader_name}.script('#{entry.cacheable_url}');"
+      
+      if !entry.target.config.combine_javascript
+        lines << "#{loader_name}.script('#{entry.cacheable_url}');"
+      end
+      
       writelines dst_path, lines
     end
     

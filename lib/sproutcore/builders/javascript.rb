@@ -41,7 +41,7 @@ SC.LAZY_INSTANTIATION['#{target_name}'].push(
       # Wrap in a module if enabled
       if entry.use_modules
         lines.unshift entry.module_preamble
-        lines.unshift "#{loader_name}.module('#{entry.manifest.bundle_name}', '#{entry.module_name}', function(require, exports, module) {"
+        lines.unshift "#{loader_name}.module('#{entry.manifest.package_name}', '#{entry.module_name}', function(require, exports, module) {"
 
         lines << entry.module_postamble
         lines << "\n});\n"
