@@ -45,7 +45,7 @@ module SC
     attr_reader :manifest
     
     def target_name; target.target_name.to_s.sub(/^\//,''); end
-    alias_method :bundle_name, :target_name # backwards compat
+    alias_method :package_name, :target_name # backwards compat
     
     def config; target.config; end
     

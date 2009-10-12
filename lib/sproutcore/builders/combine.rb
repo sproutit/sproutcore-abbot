@@ -20,6 +20,7 @@ module SC
     def build(dst_path)
       lines = []
       entries = entry.ordered_entries || entry.source_entries
+      loader_name = entry.target.config.module_loader
       
       target_name = entry.target.target_name.to_s.sub(/^\//,'')
       if entry.top_level_lazy_instantiation && entry.combined
@@ -54,7 +55,7 @@ SC.LAZY_INSTANTIATION['#{target_name}'].push(
     end
       
       if entry.notify_onload && entry.entry_type == :javascript
-        lines << "; sc_loader.script('#{entry.cacheable_url}');"
+        lines << "; #{loader_name}.script('#{entry.cacheable_url}');"
       end
       
       writelines dst_path, lines

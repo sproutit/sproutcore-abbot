@@ -86,7 +86,9 @@ mode :all do
 		:lazy_instantiation => false,
     
     # indicates that you want to include bundle loading code.  this is almost
-    # always a setting you want to leave enabled
+    # always a setting you want to leave enabled.  The value of this property
+    # should be the name of the global loader object.  It should also be the
+    # name of the framework that contains the loader.
     :use_loader => true,
 
     # Actives module loading.  Currently off by default.  If you enable the 

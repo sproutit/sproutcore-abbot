@@ -154,7 +154,11 @@ namespace :manifest do
         # etc.
         if entry.ext == 'js'
           entry = MANIFEST.add_transform entry,
-            :build_task => 'build:javascript'
+            :build_task => 'build:javascript',
+            :module_name   => entry.filename.ext,
+            :use_modules => CONFIG.use_modules,
+            :use_loader  => CONFIG.use_loader
+          entry.discover_build_directives!(true)
         end
         
         # Add transform to build into test.
@@ -208,6 +212,7 @@ namespace :manifest do
           :filename      => ['source', entry.filename].join('/'),
           :module_name   => entry.filename.ext,
           :use_modules   => CONFIG.use_modules,
+          :use_loader    => CONFIG.use_loader,
           :build_path    => File.join(MANIFEST.build_root, 'source', entry.filename),
           :url => [MANIFEST.url_root, 'source', entry.filename].join("/"),
           :build_task => 'build:javascript',
@@ -305,12 +310,13 @@ namespace :manifest do
         ordered_entries = SC::Helpers::EntrySorter.sort(entries, pf)
 
         # add a bundle_info.js if needed
-        if CONFIG.use_loader
-          bundle_info = MANIFEST.add_entry 'bundle_info.js',
-            :build_task      => 'build:bundle_info',
+        if CONFIG.use_loader && ((ordered_entries.size == 0) || (ordered_entries.find { |e| e.use_loader }))
+          bundle_info = MANIFEST.add_entry 'package_info.js',
+            :build_task      => 'build:package_info',
             :resource        => resource_name,
             :entry_type      => :javascript,
-            :source_entries  => entries.dup
+            :source_entries  => entries.dup,
+            :composite       => true
             
           entries << bundle_info
           ordered_entries.unshift(bundle_info) # load first
@@ -318,15 +324,16 @@ namespace :manifest do
         
         # if we're using modules, then add a generated entries module as well
         has_exports = !!entries.find { |e| e.module_name == 'package' }
-        if CONFIG.use_modules && !has_exports
+        if CONFIG.use_modules && !has_exports && ((ordered_entries.size == 0) || (ordered_entries.find { |e| e.use_modules }))
           module_exports = MANIFEST.add_entry 'package_exports.js',
             :build_task      => 'build:package_exports',
             :resource        => resource_name,
             :entry_type      => :javascript,
             :source_entries  => entries.dup,
-            :module_name     => 'package'
+            :module_name     => 'package',
+            :composite       => true
           entries << module_exports
-          ordered_entries.unshift(module_exports)
+          ordered_entries.push(module_exports) # load last
         end
           
         MANIFEST.add_composite entry_name,
