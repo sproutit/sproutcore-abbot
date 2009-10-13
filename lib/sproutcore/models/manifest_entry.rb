@@ -383,8 +383,11 @@ module SC
           next if !bundle_target.use_modules
           
           bundle_manifest = bundle_target.manifest_for(self.manifest.variation).build!
-          module_entry = bundle_manifest.entries.find do |e| 
-            e.module_name == module_name
+          module_entry = bundle_manifest.entries.select { |e| e.module_name == module_name }.last
+          
+          # get last item so that transforms are ignored
+          if module_entry.nil? && target.config.combine_javascript
+            module_entry = bundle_manifest.entries(:hidden => true).select { |e| e.module_name == module_name }.last
           end
           
           if module_entry
