@@ -125,11 +125,7 @@ mode :debug do
     :combine_stylesheets => true,
     
     :minify_javascript => false,
-<<<<<<< HEAD
-		:minify_css => false,
-=======
     :minify_css => false,
->>>>>>> Changes to work with tiki module loader
     
     :build_prefix => 'tmp/debug/build',
     :staging_prefix => 'tmp/debug/staging',
