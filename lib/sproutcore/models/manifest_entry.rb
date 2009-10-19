@@ -218,7 +218,8 @@ module SC
             when :start
               
               # line has a build directive or comment - its OK
-              results = line.scan(COMMENT_OR_DIRECTIVE)
+              # NOTE: skip line if it has invalid encoding
+              results = line.scan(COMMENT_OR_DIRECTIVE) rescue nil 
               if results && results.size > 0
                 
                 # handle build directive
