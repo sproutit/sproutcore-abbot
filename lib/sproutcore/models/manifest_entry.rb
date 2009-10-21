@@ -393,13 +393,13 @@ module SC
           
           if module_entry
             if as_symbol != '*' 
-              lines << "var #{as_symbol} = require('#{package_name}','#{module_name}');"
+              lines << "var #{as_symbol} = require('#{module_name}','#{package_name}');"
               
             elsif (module_exports = module_entry.exports).size>0
-              lines << "var $m__ = require('#{package_name}','#{module_name}'), #{module_exports.map { |s| "#{s[1]}=$m__.#{s[1]}" }.join(',')};"
+              lines << "var $m__ = require('#{module_name}','#{package_name}'), #{module_exports.map { |s| "#{s[1]}=$m__.#{s[1]}" }.join(',')};"
               
             else
-              lines << "require('#{package_name}', '#{module_name}');"
+              lines << "require('#{module_name}', '#{package_name}');"
             end
 
           else
