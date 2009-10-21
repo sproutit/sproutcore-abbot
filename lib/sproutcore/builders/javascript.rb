@@ -40,11 +40,15 @@ SC.LAZY_INSTANTIATION['#{target_name}'].push(
       
       # Wrap in a module if enabled
       if entry.use_modules
-        lines.unshift entry.module_preamble
-        lines.unshift "#{loader_name}.module('#{entry.manifest.package_name}', '#{entry.module_name}', function(require, exports, module) {"
+        
+        module_body = lines
+        module_body.unshift entry.module_preamble
+        module_body << entry.module_postamble
 
-        lines << entry.module_postamble
-        lines << "\n});\n"
+        lines = []
+        lines << %[#{loader_name}.module('#{entry.manifest.package_name}', '#{entry.module_name}',]
+        lines << module_body.join('').to_json # escape string
+        lines << %[);]
       end
       
       # Try to load dependencies if we're not combining javascript.
