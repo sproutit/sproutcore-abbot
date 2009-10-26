@@ -54,7 +54,7 @@ module SC
       if entry.use_modules
         loader_name = entry.target.config.module_loader
         package_name = entry.manifest.package_name 
-        lines.push %[#{loader_name}.load('#{package_name}').then(function() {\n  #{loader_name}.require('#{package_name}', '#{entry.module_name}'); \n});]
+        lines.push %[#{loader_name}.async('#{package_name}').then(function() {\n  #{loader_name}.require('#{entry.module_name}', '#{package_name}'); \n});]
         
       else
         lines.unshift %[(function() {\n]
