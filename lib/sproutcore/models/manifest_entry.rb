@@ -321,8 +321,31 @@ module SC
             self.exports += args
             
           when 'use'
-            self.use_modules = (args[1] != 'false') if args[0] == 'modules'
-            self.use_loader = (args[1] != 'false') if args[0] == 'loader'
+            case args[0]
+            when 'modules'
+              self.use_modules = (args[1] != 'false')
+            when 'loader'
+              self.use_loader  = (args[1] != 'false')
+            when 'strict'
+              # do nothing
+              
+            # for any other 'use' directive - just map directly into build
+            # config
+            else
+              _val = args[1]
+              case _val
+              when 'false'
+                _val = false
+              when 'true'
+                _val = true
+              when nil
+                _val = true
+              end
+                
+              self[args[0]] = _val
+              puts "discovered #{args[0]} = #{_val}"
+            end
+            
             
           when 'require'
             self.required += args

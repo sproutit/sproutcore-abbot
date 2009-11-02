@@ -94,9 +94,9 @@ mode :all do
     # Actives module loading.  Currently off by default.  If you enable the 
     # loader, you may also choose the name of the loader that will be used.
     # defaults to "tiki".
-    :use_modules => false,
-    :module_loader => 'tiki',
-    
+    :use_modules    => false,
+    :module_loader  => 'tiki',
+    :factory_format => :text,  # or function
     
     # if set to true then the index.html will build into the global language
     # and target directory.  This can interfere with deploying multiple builds

@@ -213,6 +213,7 @@ namespace :manifest do
           :module_name   => entry.filename.ext,
           :use_modules   => CONFIG.use_modules,
           :use_loader    => CONFIG.use_loader,
+          :factory_format => CONFIG.factory_format,
           :build_path    => File.join(MANIFEST.build_root, 'source', entry.filename),
           :url => [MANIFEST.url_root, 'source', entry.filename].join("/"),
           :build_task => 'build:javascript',
