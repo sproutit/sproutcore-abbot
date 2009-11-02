@@ -47,7 +47,18 @@ SC.LAZY_INSTANTIATION['#{target_name}'].push(
 
         lines = []
         lines << %[#{loader_name}.module('#{entry.manifest.package_name}', '#{entry.module_name}',]
-        lines << module_body.join('').to_json # escape string
+
+        # format factory as a function
+        if entry.factory_format.to_sym == :function
+          lines << 'function(require,exports,module){'
+          lines << module_body.join('')
+          lines << '}'
+          
+        # format as a string
+        else
+          lines << module_body.join('').to_json # escape string
+        end
+        
         lines << %[);]
       end
       
