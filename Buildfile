@@ -76,15 +76,16 @@ mode :all do
     # use default bootstrap framework
     :bootstrap_inline => 'sproutcore/bootstrap:javascript',
     :bootstrap_env    => true, # include an ENV global variable
-
+    :build_platform => :classic,
+    
     # In design mode, load the designer
     :design_required => ['sproutcore/designer'],
     
     :use_packed => true,
 
-		# If set to true, the specified framework, if loaded via the SC.loadBundle
-		# API, will be set up to be lazily instantiated when loaded.
-		:lazy_instantiation => false,
+    # If set to true, the specified framework, if loaded via the SC.loadBundle
+    # API, will be set up to be lazily instantiated when loaded.
+    :lazy_instantiation => false,
     
     # indicates that you want to include bundle loading code.  this is almost
     # always a setting you want to leave enabled.  The value of this property

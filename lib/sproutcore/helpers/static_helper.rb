@@ -139,7 +139,7 @@ module SC
         if target.config.bootstrap_env
           env = { 
             'mode' => SC.env.build_mode,
-            'platform' => 'browser' # make an option later
+            'platform' => target.config.build_platform
           }.to_json
           ret << %(<script type="text/javascript">\nENV = #{env};\n</script>)
         end
