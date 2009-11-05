@@ -375,23 +375,10 @@ module SC
       # get scripts
       if opts[:scripts].nil? || opts[:scripts]
         should_combine = target.config.combine_javascript
-        
-        scripts = nil
-        scripts = package_info_entry.ordered_entries if package_info_entry
-
-        # backup method
-        if scripts.nil?
-          e = entry_for('javascript.js') || entry_for('javascript.js', :hidden => true)
-          scripts = e.nil? ? [] : (should_combine ? [e] : e.ordered_entries)
-          scripts ||= []
-        end
-        
-        scripts = scripts.compact.select do |e| 
-          (e.filename == 'package_info.js') ||
-          (e.filename == 'package_exports.js') ||
-          e.use_loader
-        end
-        
+        e = entry_for('javascript.js') || entry_for('javascript.js', :hidden => true)
+        scripts = e.nil? ? [] : (should_combine ? [e] : e.ordered_entries)
+        scripts ||= []
+        scripts = scripts.compact.select { |e| e.use_loader }
         scripts = scripts.map { |e| 
           { 'id' => e.script_id, 'url' => e.cacheable_url } 
         }.compact

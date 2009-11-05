@@ -310,36 +310,34 @@ namespace :manifest do
         # sort entries
         pf = (entry_name == 'javascript.js') ? %w(source/lproj/strings.js source/core.js source/utils.js) : []
 
-        # if we're using modules, then add a generated entries module as well
-        has_exports = !!entries.find { |e| e.module_name == 'index' }
-        
-        if CONFIG.use_modules && !has_exports && !!((entries.size == 0) || (entries.find { |e| e.use_modules }))
-          package_exports = MANIFEST.add_entry 'package_exports.js',
-            :build_task      => 'build:package_exports',
-            :resource        => resource_name,
-            :entry_type      => :javascript,
-            :source_entries  => entries.dup,
-            :module_name     => 'index',
-            :composite       => true
-          entries << package_exports
-        end
-          
-        # add a package_info.js if the loader is enabled for this package
-        package_info = nil
-        if CONFIG.use_loader
+        # add a bundle_info.js if needed
+        if CONFIG.use_loader && ((entries.size == 0) || (entries.find { |e| e.use_loader }))
           package_info = MANIFEST.add_entry 'package_info.js',
             :build_task      => 'build:package_info',
             :resource        => resource_name,
             :entry_type      => :javascript,
             :source_entries  => entries.dup,
+            :module_name     => 'index',
             :composite       => true
             
           entries << package_info
         end
         
+        # if we're using modules, then add a generated entries module as well
+        has_exports = !!entries.find { |e| e.module_name == 'package' }
+        if CONFIG.use_modules && !has_exports && ((entries.size == 0) || (entries.find { |e| e.use_modules }))
+          package_exports = MANIFEST.add_entry 'package_exports.js',
+            :build_task      => 'build:package_exports',
+            :resource        => resource_name,
+            :entry_type      => :javascript,
+            :source_entries  => entries.dup,
+            :composite       => true
+          entries << package_exports
+        end
+          
         ordered_entries = SC::Helpers::EntrySorter.sort(entries, pf)
         
-        composite_entry = MANIFEST.add_composite entry_name,
+        MANIFEST.add_composite entry_name,
           :build_task      => 'build:combine',
           :source_entries  => entries,
           :top_level_lazy_instantiation => CONFIG.lazy_instantiation, 

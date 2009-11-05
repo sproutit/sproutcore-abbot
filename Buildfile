@@ -77,7 +77,6 @@ mode :all do
     # use default bootstrap framework
     :bootstrap_inline => 'sproutcore/bootstrap:javascript',
     :bootstrap_env    => true, # include an ENV global variable
-    :build_platform => :classic,
     
     # In design mode, load the designer
     :design_required => ['sproutcore/designer'],
