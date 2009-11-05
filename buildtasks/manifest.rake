@@ -308,35 +308,34 @@ namespace :manifest do
         
         # sort entries
         pf = (entry_name == 'javascript.js') ? %w(source/lproj/strings.js source/core.js source/utils.js) : []
-        ordered_entries = SC::Helpers::EntrySorter.sort(entries, pf)
 
         # add a bundle_info.js if needed
-        if CONFIG.use_loader && ((ordered_entries.size == 0) || (ordered_entries.find { |e| e.use_loader }))
-          bundle_info = MANIFEST.add_entry 'package_info.js',
+        if CONFIG.use_loader && ((entries.size == 0) || (entries.find { |e| e.use_loader }))
+          package_info = MANIFEST.add_entry 'package_info.js',
             :build_task      => 'build:package_info',
             :resource        => resource_name,
             :entry_type      => :javascript,
             :source_entries  => entries.dup,
             :composite       => true
             
-          entries << bundle_info
-          ordered_entries.unshift(bundle_info) # load first
+          entries << package_info
         end
         
         # if we're using modules, then add a generated entries module as well
         has_exports = !!entries.find { |e| e.module_name == 'package' }
-        if CONFIG.use_modules && !has_exports && ((ordered_entries.size == 0) || (ordered_entries.find { |e| e.use_modules }))
-          module_exports = MANIFEST.add_entry 'package_exports.js',
+        if CONFIG.use_modules && !has_exports && ((entries.size == 0) || (entries.find { |e| e.use_modules }))
+          package_exports = MANIFEST.add_entry 'package_exports.js',
             :build_task      => 'build:package_exports',
             :resource        => resource_name,
             :entry_type      => :javascript,
             :source_entries  => entries.dup,
             :module_name     => 'package',
             :composite       => true
-          entries << module_exports
-          ordered_entries.push(module_exports) # load last
+          entries << package_exports
         end
           
+        ordered_entries = SC::Helpers::EntrySorter.sort(entries, pf)
+        
         MANIFEST.add_composite entry_name,
           :build_task      => 'build:combine',
           :source_entries  => entries,

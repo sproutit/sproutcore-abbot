@@ -28,7 +28,7 @@ module SC
       lines << ";#{loader_name}.register('#{package_name}', #{desc.to_json});\n"
       
       if !entry.target.config.combine_javascript
-        lines << "#{loader_name}.script('#{entry.cacheable_url}');\n"
+        lines << "#{loader_name}.script('#{entry.script_id}');\n"
       end
       
       writelines dst_path, lines
@@ -50,19 +50,19 @@ module SC
       has_main = false
       
       lines = []
-      lines << "#{loader_name}.module('#{package_name}', 'package', function(require, exports, module) {\n"
+      lines << "#{loader_name}.module('#{package_name}:package', function(require, exports, module) {\n"
       lines << "var m;\n"
       entries.each do |e| 
         next if e.package_exports.nil?
         
         if e.package_exports && e.package_exports.size>0
-          lines << "m = require('#{e.module_name}', '#{package_name}');\n"
+          lines << "m = require('#{package_name}:#{e.module_name}');\n"
           e.package_exports.each do |exp|
             lines << "exports.#{exp[1]} = m.#{exp[1]};\n"
             has_main = true if exp[1] == 'main'
           end
         else
-          lines << "require('#{e.module_name}', '#{package_name}');\n"
+          lines << "require('#{package_name}:#{e.module_name}');\n"
         end
         
       end
@@ -72,12 +72,12 @@ module SC
       # if this is a loadable target (i.e. an app), and a main() is defined,
       # then try to call it automatically when the package becomes ready.
       if entry.target.loadable?
-        lines << "\n#{loader_name}.async('#{package_name}').then(function() {\n  #{loader_name}.require('package', '#{package_name}').main();\n});\n\n"
+        lines << "\n#{loader_name}.async('#{package_name}').then(function() {\n  #{loader_name}.require('#{package_name}:package').main();\n});\n\n"
       end
       
       
       if !entry.target.config.combine_javascript
-        lines << "#{loader_name}.script('#{entry.cacheable_url}');"
+        lines << "#{loader_name}.script('#{entry.script_id}');"
       end
       
       writelines dst_path, lines
