@@ -134,6 +134,15 @@ module SC
             ret << inline_javascript(resource_name)
           end
         end
+
+        # Emit a standard environment hash if we are using a module_loader
+        if target.config.bootstrap_env
+          env = { 
+            'mode' => SC.env.build_mode,
+            'platform' => 'browser' # make an option later
+          }.to_json
+          ret << %(<script type="text/javascript">\nENV = #{env};\n</script>)
+        end
         
         return ret * "\n"
       end

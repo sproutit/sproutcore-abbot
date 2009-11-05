@@ -30,17 +30,35 @@ module SC
       attr_reader :preferred_filenames
     
       def sort(entries)
-        bundleInfoEntry = []
-        bundleLoadedEntry = []
+        preamble = []
+        packageInfo    = []
+        packageExports = []
+        postamble = []
         
         # first remove bundle entries which MUST be first or last
         entries = entries.select do |entry|
-          if entry.filename == 'bundle_info.js'
-            bundleInfoEntry = [entry]
+          
+          case entry.filename
+          when 'source/__preamble__.js'
+            preamble << entry
             false
-          elsif entry.filename == 'bundle_loaded.js'
-            bundleLoadedEntry = [entry]
+            
+          when 'package_info.js'
+            packageInfo << entry
             false
+            
+          when 'bundle_loaded.js'
+            packageExports << entry # backwards compatible
+            false
+            
+          when 'package_exports.js'
+            packageExports << entry 
+            false
+            
+          when 'source/__postamble__.js'
+            postamble << entry
+            false
+            
           else
             true
           end
@@ -74,7 +92,7 @@ module SC
           add_entry_to_set(cur, ret, seen, entries, all_entries)
         end
       
-        return bundleInfoEntry + ret + bundleLoadedEntry
+        return preamble + packageInfo + ret + packageExports + postamble
       end
 
       protected

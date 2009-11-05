@@ -75,6 +75,7 @@ mode :all do
     
     # use default bootstrap framework
     :bootstrap_inline => 'sproutcore/bootstrap:javascript',
+    :bootstrap_env    => true, # include an ENV global variable
     
     :use_packed => true,
 

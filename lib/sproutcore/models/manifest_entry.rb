@@ -158,6 +158,16 @@ module SC
     end
     
     
+    # Returns a unique ID representing this item when loaded as a script.
+    # Useful for module loading.  Includes the build number, target name,
+    # language, and filename
+    def script_id
+      ret = [manifest.language, target.build_number, self.filename].join('/')
+      ret = [target.target_name.to_s[1..-1], ret].join(':')
+      ret = [ret, self.timestamp].join('?') if target.config.timestamp_urls
+      return ret
+    end
+    
     # Scans the source paths (first staging any source entries) for the 
     # passed regex.  Your block will be executed with each line that matched.
     # Returns the results of each block
@@ -325,7 +335,7 @@ module SC
             when 'modules'
               self.use_modules = (args[1] != 'false')
             when 'loader'
-              self.use_loader  = (args[1] != 'false')
+              self.use_loader  = self.notify_onload = (args[1] != 'false')
             when 'strict'
               # do nothing
               
@@ -416,13 +426,13 @@ module SC
           
           if module_entry
             if as_symbol != '*' 
-              lines << "var #{as_symbol} = require('#{module_name}','#{package_name}');"
+              lines << "var #{as_symbol} = require('#{package_name}:#{module_name}');"
               
             elsif (module_exports = module_entry.exports).size>0
-              lines << "var $m__ = require('#{module_name}','#{package_name}'), #{module_exports.map { |s| "#{s[1]}=$m__.#{s[1]}" }.join(',')};"
+              lines << "var $m__ = require('#{package_name}:#{module_name}'), #{module_exports.map { |s| "#{s[1]}=$m__.#{s[1]}" }.join(',')};"
               
             else
-              lines << "require('#{module_name}', '#{package_name}');"
+              lines << "require('#{package_name}:#{module_name}');"
             end
 
           else

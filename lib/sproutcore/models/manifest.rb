@@ -377,7 +377,11 @@ module SC
         e = entry_for('javascript.js') || entry_for('javascript.js', :hidden => true)
         scripts = e.nil? ? [] : (should_combine ? [e] : e.ordered_entries)
         scripts ||= []
-        scripts = scripts.compact.map { |e| e.cacheable_url }.compact
+        scripts = scripts.compact.select { |e| e.use_loader }
+        scripts = scripts.map { |e| 
+          { 'id' => e.script_id, 'url' => e.cacheable_url } 
+        }.compact
+        
         bundle_info['scripts'] = scripts if scripts.size>0
       end
 
@@ -418,76 +422,7 @@ module SC
       end
         
       return bundle_info
-      
-      #####
-      if target_type == :app
-        raise "bundle_info called on an app target"
-      else
-        requires = required_targets(opts) # only go one-level deep!
-        
-        # Targets that aren't pre-loaded can't be packed together. That leaves
-        # loading css and js individually and/or loading the combined or 
-        # minified css and js.
-        combine_css = config.combine_stylesheets
-        combine_js  = config.combine_javascript
-        minify_css  = config.minify_css
-        minify_css  = config.minify if minify_css.nil?
-        minify_js   = config.minify_javascript
-        minify_js   = config.minify if minify_js.nil?
-        pack_css    = config.use_packed
-        pack_js     = config.use_packed
-        
-        # sort entries...
-        css_entries = {}
-        javascript_entries = {}
-         manifest_for(opts[:variation]).build!.entries.each do |entry|
-          if entry.resource.nil?
-            entry.resource = ''
-          end
-          
-          # look for CSS or JS type entries
-          case entry.entry_type
-          when :css
-            (css_entries[entry.resource] ||= []) << entry
-          when :javascript
-            (javascript_entries[entry.resource] ||= []) << entry
-          end
-        end
-        
-        css_urls = []
-        css_entries.each do |resource_name, entries|
-          SC::Helpers::EntrySorter.sort(entries).each do |entry|
-            if minify_css && entry.minified
-              css_urls << entry.cacheable_url
-            elsif pack_css && entry.packed && !entry.minified
-              css_urls << entry.cacheable_url
-            elsif combine_css && entry.combined && !entry.packed && !entry.minified
-              css_urls << entry.cacheable_url
-            elsif !entry.combined && !entry.packed && !entry.minified
-              css_urls << entry.cacheable_url
-            end
-          end
-        end
-        
-        js_urls = []
-        javascript_entries.each do |resource_name, entries|
-          resource_name = resource_name.ext('js')
-          pf = (resource_name == 'javascript.js') ? %w(source/lproj/strings.js source/core.js source/utils.js) : []
-          SC::Helpers::EntrySorter.sort(entries, pf).each do |entry|
-            if minify_js && entry.minified
-              js_urls << entry.cacheable_url
-            elsif pack_js && entry.packed && !entry.minified
-              js_urls << entry.cacheable_url
-            elsif combine_js && entry.combined && !entry.packed && !entry.minified
-              js_urls << entry.cacheable_url
-            elsif !entry.combined && !entry.packed && !entry.minified
-              js_urls << entry.cacheable_url
-            end
-          end
-        end
-        
-        SC::HashStruct.new :requires => requires, :css_urls => css_urls, :js_urls => js_urls
-      end
+    
     end
     
     ###############################################################

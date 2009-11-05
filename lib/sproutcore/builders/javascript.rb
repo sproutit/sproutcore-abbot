@@ -46,7 +46,7 @@ SC.LAZY_INSTANTIATION['#{target_name}'].push(
         module_body << entry.module_postamble
 
         lines = []
-        lines << %[#{loader_name}.module('#{entry.manifest.package_name}', '#{entry.module_name}',]
+        lines << %[#{loader_name}.module('#{entry.manifest.package_name}:#{entry.module_name}',]
 
         # format factory as a function
         if entry.factory_format.to_sym == :function
@@ -64,7 +64,7 @@ SC.LAZY_INSTANTIATION['#{target_name}'].push(
       
       # Try to load dependencies if we're not combining javascript.
       if entry.notify_onload && !entry.target.config.combine_javascript
-        lines << "; #{loader_name}.script('#{entry.cacheable_url}');"
+        lines << "; #{loader_name}.script('#{entry.script_id}');"
       end
 
       if entry.lazy_instantiation && entry.notify_onload
