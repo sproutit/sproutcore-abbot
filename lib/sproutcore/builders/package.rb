@@ -56,7 +56,7 @@ module SC
       has_main = false
       
       lines = []
-      lines << "#{loader_name}.module('#{package_name}:index', function(require, exports, module) {\n"
+      lines << "#{loader_name}.module('#{package_name}:package', function(require, exports, module) {\n"
       lines << "var m;\n"
       entries.each do |e| 
         next if e.package_exports.nil?
@@ -78,7 +78,7 @@ module SC
       # if this is a loadable target (i.e. an app), and a main() is defined,
       # then try to call it automatically when the package becomes ready.
       if entry.target.loadable?
-        lines << "\n#{loader_name}.main('#{package_name}', 'main');\n\n"
+        lines << "\n#{loader_name}.async('#{package_name}').then(function() {\n  #{loader_name}.require('#{package_name}:package').main();\n});\n\n"
       end
       
       

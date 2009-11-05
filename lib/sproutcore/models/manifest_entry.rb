@@ -169,6 +169,16 @@ module SC
       return ret
     end
     
+    # Returns a unique ID representing this item when loaded as a script.
+    # Useful for module loading.  Includes the build number, target name,
+    # language, and filename
+    def script_id
+      ret = [manifest.language, target.build_number, self.filename].join('/')
+      ret = [target.target_name.to_s[1..-1], ret].join(':')
+      ret = [ret, self.timestamp].join('?') if target.config.timestamp_urls
+      return ret
+    end
+    
     # Scans the source paths (first staging any source entries) for the 
     # passed regex.  Your block will be executed with each line that matched.
     # Returns the results of each block
