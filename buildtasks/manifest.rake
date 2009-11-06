@@ -157,7 +157,8 @@ namespace :manifest do
             :build_task => 'build:javascript',
             :module_name   => entry.filename.ext,
             :use_modules => CONFIG.use_modules,
-            :use_loader  => CONFIG.use_loader
+            :use_loader  => CONFIG.use_loader,
+            :factory_format => :function
           entry.discover_build_directives!(true)
         end
         
@@ -309,18 +310,6 @@ namespace :manifest do
         # sort entries
         pf = (entry_name == 'javascript.js') ? %w(source/lproj/strings.js source/core.js source/utils.js) : []
 
-        # add a bundle_info.js if needed
-        if CONFIG.use_loader && ((entries.size == 0) || (entries.find { |e| e.use_loader }))
-          package_info = MANIFEST.add_entry 'package_info.js',
-            :build_task      => 'build:package_info',
-            :resource        => resource_name,
-            :entry_type      => :javascript,
-            :source_entries  => entries.dup,
-            :composite       => true
-            
-          entries << package_info
-        end
-        
         # if we're using modules, then add a generated entries module as well
         has_exports = !!entries.find { |e| e.module_name == 'package' }
         if CONFIG.use_modules && !has_exports && ((entries.size == 0) || (entries.find { |e| e.use_modules }))
@@ -334,9 +323,22 @@ namespace :manifest do
           entries << package_exports
         end
           
+        # add a bundle_info.js if needed
+        package_info = nil
+        if CONFIG.use_loader && ((entries.size == 0) || (entries.find { |e| e.use_loader }))
+          package_info = MANIFEST.add_entry 'package_info.js',
+            :build_task      => 'build:package_info',
+            :resource        => resource_name,
+            :entry_type      => :javascript,
+            :source_entries  => entries.dup,
+            :composite       => true
+            
+          entries << package_info
+        end
+        
         ordered_entries = SC::Helpers::EntrySorter.sort(entries, pf)
         
-        MANIFEST.add_composite entry_name,
+        composite_entry = MANIFEST.add_composite entry_name,
           :build_task      => 'build:combine',
           :source_entries  => entries,
           :top_level_lazy_instantiation => CONFIG.lazy_instantiation, 
@@ -345,6 +347,17 @@ namespace :manifest do
           :entry_type      => :javascript,
           :combined        => true,
           :notify_onload   => CONFIG.use_loader
+        
+        # Use final list for package_info to make sure we get the package_info
+        # itself.  
+        if package_info
+          if CONFIG.combine_javascript
+            package_info.ordered_entries = [composite_entry]
+          else
+            package_info.ordered_entries = ordered_entries.dup
+          end
+        end
+        
       end
       
     end

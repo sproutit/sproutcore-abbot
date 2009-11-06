@@ -23,9 +23,15 @@ module SC
       # emit a bundle definition for the current target
       loader_name = entry.target.config.module_loader
       package_name = entry.manifest.package_name
-      desc = entry.manifest.bundle_info
+      desc = entry.manifest.bundle_info(:package_info => entry)
       lines = []
       lines << ";#{loader_name}.register('#{package_name}', #{desc.to_json});\n"
+      
+      # make sure all dependents are loaded into the global context if this
+      # package is not module aware
+      if !entry.target.use_modules
+        lines << "#{loader_name}.global('#{package_name}');\n"
+      end
       
       if !entry.target.config.combine_javascript
         lines << "#{loader_name}.script('#{entry.script_id}');\n"

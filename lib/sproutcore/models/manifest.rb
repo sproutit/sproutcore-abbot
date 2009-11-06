@@ -367,6 +367,7 @@ module SC
     #
     def bundle_info(opts ={})
       
+      package_info_entry = opts[:package_info]
       bundle_info = {} # here is what we will build
       
       build! # make sure we are ready...
@@ -374,10 +375,23 @@ module SC
       # get scripts
       if opts[:scripts].nil? || opts[:scripts]
         should_combine = target.config.combine_javascript
-        e = entry_for('javascript.js') || entry_for('javascript.js', :hidden => true)
-        scripts = e.nil? ? [] : (should_combine ? [e] : e.ordered_entries)
-        scripts ||= []
-        scripts = scripts.compact.select { |e| e.use_loader }
+        
+        scripts = nil
+        scripts = package_info_entry.ordered_entries if package_info_entry
+
+        # backup method
+        if scripts.nil?
+          e = entry_for('javascript.js') || entry_for('javascript.js', :hidden => true)
+          scripts = e.nil? ? [] : (should_combine ? [e] : e.ordered_entries)
+          scripts ||= []
+        end
+        
+        scripts = scripts.compact.select do |e| 
+          (e.filename == 'package_info.js') ||
+          (e.filename == 'package_exports.js') ||
+          e.use_loader
+        end
+        
         scripts = scripts.map { |e| 
           { 'id' => e.script_id, 'url' => e.cacheable_url } 
         }.compact
@@ -390,7 +404,10 @@ module SC
         e = entry_for('stylesheet.css') || entry_for('stylesheet.css', :hidden => true)
         stylesheets = e.nil? ? [] : (should_combine ? [e] : e.ordered_entries)
         stylesheets ||= []
-        stylesheets = stylesheets.compact.map { |e| e.cacheable_url }.compact
+        stylesheets = stylesheets.compact.map { |e| 
+          { 'id' => e.script_id, 'url' => e.cacheable_url }
+        }.compact
+        
         bundle_info['stylesheets'] = stylesheets if stylesheets.size>0
       end
       

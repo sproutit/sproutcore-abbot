@@ -42,9 +42,11 @@ module SC
           # include either the entry URL or URL of ordered entries
           # depending on setup
           if combine_stylesheets
-            urls << cur_entry.cacheable_url
+            urls << { :id => cur_entry.script_id, :url => cur_entry.cacheable_url }
           else
-            urls += cur_entry.ordered_entries.map { |e| e.cacheable_url }
+            urls += cur_entry.ordered_entries.map { |e| 
+              { :id => e.script_id, :url => e.cacheable_url }
+            }
           end
           
           # add any stylesheet libs from the target
@@ -53,13 +55,19 @@ module SC
           
         # Convert to HTML and return
         urls = urls.map do |url|
+          
+          unless url.instance_of? String
+            style_id = url[:id]
+            url = url[:url]
+          end
+          
           if include_method == :import
             %(  @import url('#{url}');)
           else
-            %(  <link href="#{url}" rel="stylesheet" type="text/css" />)
+            %(  <link href="#{url}" rel="stylesheet" type="text/css" loadid="#{style_id}" />)
           end
         end
-        
+
         # if include style is @import, surround with style tags
         if include_method == :import
           %(<style type="text/css">\n#{urls * "\n"}</style>)
