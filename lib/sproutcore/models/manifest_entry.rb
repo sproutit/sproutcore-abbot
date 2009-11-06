@@ -405,6 +405,7 @@ module SC
     def module_preamble
       return '' if !self.use_modules
       lines = []
+      v = self.manifest.variation
       
       # import symbols from other modules
       self.imports.each do |import|
@@ -414,17 +415,19 @@ module SC
         
         puts "IMPORT: import=#{import} as_symbol=#{as_symbol}"
         if bundle_target
-          next if !bundle_target.use_modules
           
-          bundle_manifest = bundle_target.manifest_for(self.manifest.variation).build!
-          module_entry = bundle_manifest.entries.select { |e| e.module_name == module_name }.last
+          bundle_manifest = bundle_target.manifest_for(v).build!
+          module_entry = bundle_manifest.entries.select { |e| 
+            e.module_name == module_name 
+          }.last
           
           # get last item so that transforms are ignored
-          if module_entry.nil? && target.config.combine_javascript
+          if module_entry.nil? && bundle_target.config.combine_javascript
             module_entry = bundle_manifest.entries(:hidden => true).select { |e| e.module_name == module_name }.last
           end
           
           if module_entry
+            
             if as_symbol != '*' 
               lines << "var #{as_symbol} = require('#{package_name}:#{module_name}');"
               
