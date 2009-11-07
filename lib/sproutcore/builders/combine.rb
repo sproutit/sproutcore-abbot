@@ -55,7 +55,7 @@ SC.LAZY_INSTANTIATION['#{target_name}'].push(
     end
       
       if entry.notify_onload && entry.entry_type == :javascript
-        lines << "; #{loader_name}.script('#{entry.cacheable_url}');"
+        lines << "; #{loader_name}.script('#{entry.script_id}');"
       end
       
       writelines dst_path, lines
