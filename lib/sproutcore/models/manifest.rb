@@ -415,7 +415,7 @@ module SC
         
         t_opts = { 
           :debug => target.config.load_debug,  
-          :tests => target.config.load_tests,
+          :test  => target.config.load_tests,
           :theme => true 
         }
         

@@ -280,6 +280,7 @@ module SC
         self.imports = []
         self.exports = []
         package_name = self.target.package_name
+        loader_name = self.target.config.module_loader
         
         entry.scan_module do |directive, args|
           directive = directive.to_s.downcase.gsub(/^\s+/,'').gsub(/\s+$/,'')
@@ -291,13 +292,33 @@ module SC
             # handle import foo as bar
             if args.size == 3 && args[1] == 'as'
               a = args[0]
-              a = (a =~ /:/ ? a : [package_name,a].join(':'))
+              if a =~ /^this:/
+                a = [package_name, a[5..-1]].join(':')
+              elsif !(a =~ /:/)
+                if self.target.target_for(a)
+                  a = [a, 'package'].join(':')
+                elsif loader_name && self.target.target_for([loader_name,a] * '/')
+                  a = [[loader_name, a].join('/'), 'package'].join(':')
+                else
+                  a = [package_name, a].join(':')
+                end
+              end
               self.imports << [a, args[2]]
 
             else
               # normalize.  if no explicit target, assume local
               args.each do |a|
-                a = (a =~ /:/ ? a : [package_name,a].join(':'))
+                if a =~ /^this:/
+                  a = [package_name, a[5..-1]].join(':')
+                elsif !(a =~ /:/)
+                  if self.target.target_for(a) 
+                    a = [a, 'package'].join(':')
+                  elsif loader_name && self.target.target_for([loader_name,a] * '/')
+                    a = [[loader_name, a].join('/'), 'package'].join(':')
+                  else
+                    a = [package_name, a].join(':')
+                  end
+                end
                 self.imports << [a, '*']
               end
             end

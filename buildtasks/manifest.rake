@@ -346,7 +346,9 @@ namespace :manifest do
           :ordered_entries => ordered_entries,
           :entry_type      => :javascript,
           :combined        => true,
-          :notify_onload   => CONFIG.use_loader
+          :notify_onload   => CONFIG.use_loader,
+          :use_loader      => CONFIG.use_loader,
+          :use_modules     => false  # combined never uses a module
         
         # Use final list for package_info to make sure we get the package_info
         # itself.  
