@@ -484,6 +484,15 @@ module SC
       self.exports.each do |export|
         lines << "exports.#{export[1]} = #{export[0]};\n"
       end
+      
+      if self.global_exports && self.global_exports.size>0
+        lines << "var $g__ = require('system').global;\nif ($g__) {\n"
+        self.global_exports.each do |export|
+          lines << "exports['#{export[1]}'] = #{export[0]};\n"
+        end
+        lines << "}\n"
+      end
+      
       return lines * ''
     end
     

@@ -78,7 +78,7 @@ module SC
       # if this is a loadable target (i.e. an app), and a main() is defined,
       # then try to call it automatically when the package becomes ready.
       if entry.target.loadable?
-        lines << "\n#{loader_name}.async('#{package_name}').then(function() {\n  #{loader_name}.require('#{package_name}:package').main();\n});\n\n"
+        lines << "\n#{loader_name}.main('#{package_name}', 'main');\n\n"
       end
       
       
