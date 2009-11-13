@@ -17,9 +17,9 @@ mode :all do
     # REQUIRED CONFIGS 
     # You will not usually need to override these configs, but the code 
     # assumes they will be present, so you must support them.
-    :build_prefix   => 'tmp/build',
-    :staging_prefix => 'tmp/staging',
-    :cache_prefix   => 'tmp/cache',
+    :build_prefix   => "tmp/#{SC.env.build_mode}/build",
+    :staging_prefix => "tmp/#{SC.env.build_mode}/staging",
+    :cache_prefix   => "tmp/#{SC.env.build_mode}/cache",
     :url_prefix     => 'static',
   
     # Defines the directories that may contain targets, and maps them to a 
@@ -128,9 +128,6 @@ mode :debug do
     
     :minify_javascript => false,
     :minify_css => false,
-    
-    :build_prefix => 'tmp/debug/build',
-    :staging_prefix => 'tmp/debug/staging',
     
     # debug settings for sc-server
     :serve_exceptions => true,
