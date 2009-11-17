@@ -67,7 +67,7 @@ module SC
       when :yaml
         output = ["# SproutCore Build Manifest v1.0", manifests.to_yaml].join("\n")
       when :json
-        output = mainfests.to_json
+        output = manifests.to_json
       end
       
       # output ...
