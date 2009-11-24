@@ -46,6 +46,7 @@ module SC
     
     def target_name; target.target_name.to_s.sub(/^\//,''); end
     alias_method :package_name, :target_name # backwards compat
+    alias_method :bundle_name, :target_name
     
     def config; target.config; end
     
@@ -91,7 +92,14 @@ module SC
     # config settings.
     def expand_required_targets(target, opts = {})
       opts[:debug] = target.config.load_debug
-      opts[:test] = target.config.load_tests
+      
+      # do not get test targets for stylesheets when not building tests
+      if opts[:test].nil? && opts[:resource_type] == :stylesheet
+        opts[:test] = false
+      else
+        opts[:test] = target.config.load_tests
+      end
+
       opts[:theme] = true
       return target.expand_required_targets(opts)
     end

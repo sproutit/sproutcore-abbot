@@ -4,6 +4,7 @@ module SC::ManifestSpecHelpers
 
   def std_before(project_name = :real_world, target_name = :sproutcore)
     @project = fixture_project project_name
+    
     @target = @project.target_for target_name
     @buildfile = @target.buildfile
     @config = @target.config

@@ -38,7 +38,7 @@ module SC
         # collect urls from entries
         urls = []
         combine_stylesheets = t.config.combine_stylesheets
-        combined_entries(t, opts, 'stylesheet.css', 'stylesheet-packed.css') do |cur_target, cur_entry|
+        combined_entries(t, :stylesheet, opts, 'stylesheet.css', 'stylesheet-packed.css') do |cur_target, cur_entry|
           # include either the entry URL or URL of ordered entries
           # depending on setup
           if combine_stylesheets
@@ -98,7 +98,7 @@ module SC
         # collect urls from entries
         urls = []
         combine_javascript = t.config.combine_javascript
-        combined_entries(t, opts, 'javascript.js', 'javascript-packed.js') do |cur_target, cur_entry|
+        combined_entries(t, :javascript, opts, 'javascript.js', 'javascript-packed.js') do |cur_target, cur_entry|
           
           # include either the entry URL or URL of ordered entries
           # depending on setup
@@ -345,14 +345,14 @@ module SC
       end
 
       # Find all of the combined entries.
-      def combined_entries(t, opts, entry_name, packed_entry_name=nil, &block)
+      def combined_entries(t, resource_type, opts, entry_name, packed_entry_name=nil, &block)
         
         # choose manifest variant.  default to current manifest variant 
         # if no explicit language was passed.
         v = opts[:language] ? { :language => opts[:language] } : manifest.variation
         
         # choose which targets to include packed and unpacked
-        targets = expand_required_targets(t)
+        targets = expand_required_targets(t, :resource_type => resource_type)
         
         if t.config.use_packed && packed_entry_name # must pass to activate
           packed, unpacked = SC::Helpers::PackedOptimizer.optimize(targets)

@@ -374,7 +374,6 @@ module SC
               end
                 
               self[args[0]] = _val
-              puts "discovered #{args[0]} = #{_val}"
             end
             
             
@@ -434,7 +433,6 @@ module SC
         package_name, module_name = import.split(':')
         bundle_target = self.target.target_for(package_name)
         
-        puts "IMPORT: import=#{import} as_symbol=#{as_symbol}"
         if bundle_target
           
           bundle_manifest = bundle_target.manifest_for(v).build!

@@ -106,6 +106,9 @@ describe SC::Builder::Html do
     
     it "returns the required targets for a typical target" do
       @builder = SC::Builder::Html.new(@index_entry)
+      @target.config.load_debug = false # simulate prod environment
+      @target.config.load_tests = false 
+
       @builder.expand_required_targets(@target).should == @target.expand_required_targets
     end
     
@@ -114,6 +117,8 @@ describe SC::Builder::Html do
       @target.config.debug_required.should_not be_nil # precondition
       
       @target.config.load_debug = true
+      @target.config.load_tests = false
+      
       @builder.expand_required_targets(@target).should == @target.expand_required_targets(:debug => true)
     end
     
@@ -277,6 +282,9 @@ describe SC::Builder::Html do
           end
           
           @target.config.combine_stylesheets = true 
+          @target.config.load_debug = false
+          @target.config.load_tests = false
+
           result = @builder.stylesheets_for_client
           expect_links(result, urls)
           
@@ -295,6 +303,9 @@ describe SC::Builder::Html do
           urls.flatten!
           
           @target.config.combine_stylesheets = false 
+          @target.config.load_debug = false
+          @target.config.load_tests = false
+          
           result = @builder.stylesheets_for_client
           expect_links(result, urls)
   
@@ -329,7 +340,12 @@ describe SC::Builder::Html do
           it "does NOT timestamp to all urls if timestamp_urls is false" do
             # simulate having timestamp_urls set true in the root buildfile
             @target.config.timestamp_urls = false # preconditon
-            @target.expand_required_targets.each do |t|
+            @target.config.load_debug = true
+            @target.config.load_tests = false
+            
+            req_targets = @target.expand_required_targets(:debug => true, 
+              :tests => false, :theme => true)
+            req_targets.each do |t|
               t.config.timestamp_urls = false
             end
             test_timestamps false
@@ -338,7 +354,12 @@ describe SC::Builder::Html do
           it "does timestamp all urls if timestamp_urls is true" do
             # simulate having timestamp_urls set true in the root buildfile
             @target.config.timestamp_urls = true # precondition
-            @target.expand_required_targets.each do |t|
+            @target.config.load_debug = true
+            @target.config.load_tests = false
+            
+            req_targets = @target.expand_required_targets(:debug => true, 
+              :tests => false, :theme => true)
+            req_targets.each do |t|
               t.config.timestamp_urls = true
             end
             test_timestamps true
@@ -369,7 +390,7 @@ describe SC::Builder::Html do
           url = /#{Regexp.escape url}/
           
           @target.config.combine_stylesheets = true 
-          @target.config.load_test = true 
+          @target.config.load_tests = true 
           result = @builder.stylesheets_for_client
           result.should_not =~ url
           
@@ -473,7 +494,13 @@ describe SC::Builder::Html do
           
           it "does NOT timestamp to all urls if timestamp_urls is false" do
             @target.config.timestamp_urls = false # preconditon
-            @target.expand_required_targets.each do |t|
+            @target.config.load_debug = true
+            @target.config.load_tests = false
+
+            req_targets = @target.expand_required_targets(:debug => true, 
+              :test => false, :theme => true)
+              
+            req_targets.each do |t|
               t.config.timestamp_urls = false
             end
             test_timestamps false
@@ -481,7 +508,13 @@ describe SC::Builder::Html do
         
           it "does timestamp all urls if timestamp_urls is true" do
             @target.config.timestamp_urls = true # precondition
-            @target.expand_required_targets.each do |t|
+            @target.config.load_debug = true
+            @target.config.load_tests = false
+
+            req_targets = @target.expand_required_targets(:debug => true, 
+              :test => false, :theme => true)
+              
+            req_targets.each do |t|
               t.config.timestamp_urls = true
             end
             test_timestamps true
