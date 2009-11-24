@@ -12,3 +12,9 @@
 frameworks/sproutcore:
   repo: git://github.com/sproutit/sproutcore.git
 
+frameworks/tiki:
+  repo: git://github.com/sproutit/tiki.git
+  
+frameworks/core_test:
+  repo: git://github.com/sproutit/core_test.git
+  
