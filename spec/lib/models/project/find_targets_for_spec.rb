@@ -28,12 +28,13 @@ describe SC::Project, 'find_targets_for' do
 
     # verify preconditions
     target_types = project.config.target_types
-    target_types.size.should eql(6) # also :pages - not tested here
+    target_types.size.should eql(7) # also :pages - not tested here
     target_types[:apps].should eql(:app)
     target_types[:clients].should eql(:app)
     target_types[:frameworks].should eql(:framework)
     target_types[:themes].should eql(:theme)
     target_types[:bundles].should eql(:framework)
+    target_types[:packages].should eql(:framework)
     project.config.allow_nested_targets.should be_true
     
     # Note, this expectation assumes the fixtures in find_targets/standard has

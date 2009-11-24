@@ -15,6 +15,33 @@ config :test_test,
   :test_required  => [:qunit],
   :theme => nil
 
-config :bundle_test,
+## module related tests
+
+config :package_test,
   :required => [:req_target_1],
-  :dynamic_required => [:req_target_2]
+  :dynamic_required => [:req_target_2],
+  :use_modules => true
+  
+config :module_test,
+  :required => [:req_target_1],
+  :use_modules => true
+  
+config :no_modules_test,
+  :required => [:req_target_1],
+  :use_modules => true # uses modules here but all files disable it
+  
+config :no_loader_test,
+  :required => [:req_target_1],
+  :use_loader => false
+  
+config :no_loader_items_test,
+  :required => [],
+  :use_loader => true, # by default
+  :use_modules => true # must enable to support loading modules
+  
+# has no JS in it
+config :no_javascript,
+  :use_loader => true,
+  :use_modules => false
+  
+  

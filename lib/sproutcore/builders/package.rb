@@ -17,7 +17,7 @@ module SC
       begin
         require 'json'
       rescue
-        raise "Cannot render bundle_info.js because json is not installed. Try running 'sudo gem install json' and try again."
+        raise "Cannot render package_info.js because json is not installed. Try running 'sudo gem install json' and try again."
       end
       
       # emit a bundle definition for the current target

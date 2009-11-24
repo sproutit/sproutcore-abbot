@@ -312,7 +312,8 @@ namespace :manifest do
 
         # if we're using modules, then add a generated entries module as well
         has_exports = !!entries.find { |e| e.module_name == 'package' }
-        if CONFIG.use_modules && !has_exports && ((entries.size == 0) || (entries.find { |e| e.use_modules }))
+        
+        if CONFIG.use_modules && !has_exports && !!((entries.size == 0) || (entries.find { |e| e.use_modules }))
           package_exports = MANIFEST.add_entry 'package_exports.js',
             :build_task      => 'build:package_exports',
             :resource        => resource_name,
@@ -323,9 +324,9 @@ namespace :manifest do
           entries << package_exports
         end
           
-        # add a bundle_info.js if needed
+        # add a package_info.js if the loader is enabled for this package
         package_info = nil
-        if CONFIG.use_loader && ((entries.size == 0) || (entries.find { |e| e.use_loader }))
+        if CONFIG.use_loader
           package_info = MANIFEST.add_entry 'package_info.js',
             :build_task      => 'build:package_info',
             :resource        => resource_name,
