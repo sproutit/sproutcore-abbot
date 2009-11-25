@@ -6,6 +6,7 @@
 # ===========================================================================
 
 require 'ostruct'
+require 'strscan'
 
 module SC
 
@@ -208,9 +209,6 @@ module SC
     # use when module mode is turned on... 
     # look for lines that are comments or directives only.  must start with
     # //, /* or "
-    END_BLOCK_COMMENT_REGEX    = /\s*\*\//
-    BEGIN_BLOCK_COMMENT_REGEX  = /\s*\/\*/
-    COMMENT_OR_DIRECTIVE = /^\s*((['"])(.+?)(\2)\s*;)?\s*(\/[\/\*].+)?\s*$/ 
         
     def scan_module(&block)
       
@@ -223,39 +221,56 @@ module SC
         paths.each do |path|
           next unless File.exist?(path)
           state = :start
+          quote = nil
           File.readlines(path).each do |line|
-            case state
-            when :start
-              
-              # line has a build directive or comment - its OK
-              # NOTE: skip line if it has invalid encoding
-              results = line.scan(COMMENT_OR_DIRECTIVE) rescue nil 
-              if results && results.size > 0
-                
-                # handle build directive
-                if directive = results[0][2]
+            scanner = StringScanner.new line
+            loop do
+              scanner.skip /\s*/
+              break if scanner.eos?
+
+              case state
+              when :start
+                # quoted strings
+                quote = scanner.scan(/["']/)
+                if not quote.nil?
+                  state = :string
+                  next
+                end
+
+                # C++-style comments
+                next if not scanner.scan(%r{//.*}).nil?
+
+                # block comments
+                if scanner.scan(%r{/\*})
+                  state = :block
+                  next
+                end
+
+                state = :code # beyond start of file
+
+              when :string
+                # NOTE: allows multiple directives in multiline strings
+                directive = scanner.scan %r{(?:[^#{quote}\\]|\\.)*}
+                if not directive.nil?
                   args = directive.split(' ')
                   directive = args.shift
                   yield(directive, args)
                 end
-                
-                # handle start of block comment
-                if results[0][4] =~ /^\/\*.*[^\*\/]\s*$/
-                  state = :block
-                end
-                
-              else
-                state = :code # beyond start of file
+
+                # directives must be terminated with a semicolon
+                state = :semi if not scanner.scan(%r{#{quote}}).nil?
+
+              when :semi
+                state = scanner.skip(/;/).nil? ? :code : :start
+
+              # while in block just look for closing block statement
+              when :block
+                scanner.skip %r{(?:[^*]|\*(?!/))*};
+                state = :start if not scanner.scan(%r{\*/}).nil?
+
+              when :code
+                break # nothing to do
               end
-            
-            # while in block just look for closing block statement
-            when :block
-              if line =~ /\*\//
-                state = (line =~ /\*\/\s*(\/\/.*)?$/) ? :start : :code
-              end
-            
-            when :code
-              break # nothing to do
             end
           end
         end
