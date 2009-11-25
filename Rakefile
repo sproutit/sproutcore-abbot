@@ -116,7 +116,7 @@ namespace :dist do
         
         git(path,"remote add origin #{repo_url}")
         git(path,"fetch origin")
-        git(path,"checkout -b origin remotes/origin/master")
+        git(path,"checkout -b master remotes/origin/master")
       
       else
         $stdout.puts "Found #{rel_path}"
