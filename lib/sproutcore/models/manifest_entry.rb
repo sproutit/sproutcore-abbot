@@ -289,37 +289,45 @@ module SC
             self.resource = (args.first || '').ext 
           
           when 'import'
-            # handle import foo as bar
-            if args.size == 3 && args[1] == 'as'
-              a = args[0]
-              if a =~ /^this:/
-                a = [package_name, a[5..-1]].join(':')
-              elsif !(a =~ /:/)
-                if self.target.target_for(a)
-                  a = [a, 'package'].join(':')
-                elsif loader_name && self.target.target_for([loader_name,a] * '/')
-                  a = [[loader_name, a].join('/'), 'package'].join(':')
-                else
-                  a = [package_name, a].join(':')
+            if args[0] == 'package'
+
+              # handle import package foo as bar
+              if (args.size == 4) && (args[2] == 'as')
+                import_foo = args[1]+':index'
+                as_bar     = args[3]
+                self.imports << [import_foo, as_bar]
+                
+              # handle import package foo bar baz biff
+              else
+                args.each do |a|
+                  next if a == 'package'
+                  import_foo = a+':index'
+                  self.imports << [import_foo, '*']
                 end
               end
-              self.imports << [a, args[2]]
+              
+            # handle import foo as bar
+            elsif args.size == 3 && args[1]  == 'as'
+              import_foo = args[0]
+              if import_foo =~ /^this:/
+                import_foo = "#{package_name}:#{a[5..-1]}"
+                
+              elsif !(import_foo =~ /:/)
+                import_foo = "#{package_name}:#{import_foo}"
+              end
+              as_bar = args[2]
+              self.imports << [import_foo, as_bar]
 
+            # handle import foo bar baz biff
             else
-              # normalize.  if no explicit target, assume local
-              args.each do |a|
-                if a =~ /^this:/
-                  a = [package_name, a[5..-1]].join(':')
-                elsif !(a =~ /:/)
-                  if self.target.target_for(a) 
-                    a = [a, 'package'].join(':')
-                  elsif loader_name && self.target.target_for([loader_name,a] * '/')
-                    a = [[loader_name, a].join('/'), 'package'].join(':')
-                  else
-                    a = [package_name, a].join(':')
-                  end
+              args.each do |import_foo|
+                if import_foo =~ /^this:/
+                  import_foo = "#{package_name}:#{a[5..-1]}"
+                  
+                elsif !(import_foo =~ /:/)
+                  import_foo = "#{package_name}:#{import_foo}"
                 end
-                self.imports << [a, '*']
+                self.imports << [import_foo, '*']
               end
             end
             
