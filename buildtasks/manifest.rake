@@ -311,7 +311,7 @@ namespace :manifest do
         pf = (entry_name == 'javascript.js') ? %w(source/lproj/strings.js source/core.js source/utils.js) : []
 
         # if we're using modules, then add a generated entries module as well
-        has_exports = !!entries.find { |e| e.module_name == 'package' }
+        has_exports = !!entries.find { |e| e.module_name == 'index' }
         
         if CONFIG.use_modules && !has_exports && !!((entries.size == 0) || (entries.find { |e| e.use_modules }))
           package_exports = MANIFEST.add_entry 'package_exports.js',
@@ -319,7 +319,7 @@ namespace :manifest do
             :resource        => resource_name,
             :entry_type      => :javascript,
             :source_entries  => entries.dup,
-            :module_name     => 'package',
+            :module_name     => 'index',
             :composite       => true
           entries << package_exports
         end
