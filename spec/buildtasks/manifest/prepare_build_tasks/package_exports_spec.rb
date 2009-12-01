@@ -94,7 +94,7 @@ describe "manifest:prepare_build_tasks:combine package_exports" do
     
   end
   
-  describe "when use_modules = true but target has package.js" do
+  describe "when use_modules = true but target has index.js" do
     
     before do
       std_before :builder_tests, :package_test
@@ -107,7 +107,7 @@ describe "manifest:prepare_build_tasks:combine package_exports" do
 
     it "VERIFY PRECONDITIONS" do
       @target.config.use_modules.should be_true
-      @manifest.entry_for('source/package.js').should_not be_nil
+      @manifest.entry_for('source/index.js').should_not be_nil
     end
       
     it "should NOT generate a package_exports entry" do

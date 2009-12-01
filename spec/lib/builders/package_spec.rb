@@ -27,7 +27,7 @@ describe SC::Builder::PackageExports do
     code = File.read(path)
     
     # verify key points...
-    code.should =~ /#{Regexp.escape("tiki.module('module_test:package'")}/
+    code.should =~ /#{Regexp.escape("tiki.module('module_test:index'")}/
     
     # should only define exports for foo & bar
     # other exports are defined in the fixture but not at package level
