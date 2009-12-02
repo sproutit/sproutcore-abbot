@@ -55,9 +55,6 @@ describe SC::Builder::PackageInfo do
     @target.config.load_debug = false
     @target.config.theme = nil
     @target.config.timestamp_urls = false
-    @manifest.build!
-    
-    @entry = @manifest.entry_for('package_info.js')
   end
   
   after do
@@ -65,8 +62,34 @@ describe SC::Builder::PackageInfo do
     std_after
   end
 
-  it "should generate a JS file with package exports" do
+  def prep
+    @manifest.build!
+
+    if @target.config.combine_javascript
+      @entry = @manifest.entry_for('package_info.js', :hidden => true) 
+    else
+      @entry = @manifest.entry_for('package_info.js')
+    end
+    
     @entry.should_not be_nil
+
+    # get JS entries.  omit the combined entry if we are not combining
+    script_entries = @manifest.entries.select do |x|
+      (x.entry_type == :javascript) &&
+      (@target.config.combine_javascript || x.filename != 'javascript.js')
+    end
+    
+    # get JS entries.  omit the combined entry if we are not combining
+    style_entries  = @manifest.entries.select do |x| 
+      (x.entry_type == :css) &&
+      (@target.config.combine_stylesheets || x.filename != 'stylesheet.css')
+    end
+    
+    return [script_entries, style_entries]
+  end
+  
+  def verify_entry(script_entries, style_entries)
+
     @entry.build!
     path = @entry.build_path
     File.exist?(path).should be_true
@@ -88,15 +111,46 @@ describe SC::Builder::PackageInfo do
     # should include package info for required and dynamic
     info['packages'].keys.sort.should == %w(req_target_1 req_target_2)
 
-    script_entries = @entry.source_entries + [@entry]
+    # verify scripts
     info_scripts = info['scripts']
-    
     info_scripts.map { |x| x['url'] }.sort.should == script_entries.map { |x| x.cacheable_url }.sort
 
     info_scripts.map { |x| x['id'] }.sort.should == script_entries.map { |x| x.script_id }.sort
+
+    # verify stlyes
+    info_styles = info['stylesheets']
+    info_urls   = info_styles.map { |x| x['url'] }.sort
+    info_urls.should == style_entries.map { |x| x.cacheable_url }.sort
+
+    info_ids    = info_styles.map { |x| x['id'] }.sort
+    info_ids.should == style_entries.map { |x| x.script_id }.sort
     
     # should register script ID
-    code.should =~ /#{Regexp.escape("tiki.script('#{@entry.script_id}')")}/
+    if @target.config.combine_javascript == false
+      code.should =~ /#{Regexp.escape("tiki.script('#{@entry.script_id}')")}/
+    end
+  end
+  
+  it "should generate a JS file with package info" do
+    @target.config.combine_javascript = false
+    @target.config.combine_stylesheets = false
+
+    script_entries, style_entries = prep
+    script_entries.size.should > 1
+    style_entries.size.should > 1
+
+    verify_entry(script_entries, style_entries)
+  end
+
+  it "should generate a combined JS file with package info" do
+    @target.config.combine_javascript = true
+    @target.config.combine_stylesheets = true
+    
+    script_entries, style_entries = prep
+    script_entries.size.should == 1
+    style_entries.size.should == 1
+
+    verify_entry(script_entries, style_entries)
   end
   
 end
