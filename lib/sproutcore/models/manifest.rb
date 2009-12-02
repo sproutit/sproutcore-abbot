@@ -400,7 +400,7 @@ module SC
       end
 
       if opts[:stylesheets].nil? || opts[:stylesheets]
-        should_combine = target.config.combine_stylesheet
+        should_combine = target.config.combine_stylesheets
         e = entry_for('stylesheet.css') || entry_for('stylesheet.css', :hidden => true)
         stylesheets = e.nil? ? [] : (should_combine ? [e] : e.ordered_entries)
         stylesheets ||= []
