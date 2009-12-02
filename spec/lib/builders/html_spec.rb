@@ -383,7 +383,7 @@ describe SC::Builder::Html do
           result.should =~ url
         end
 
-        it "does NOT add stylesheet for test if CONFIG.load_test" do
+        it "adds stylesheet for test if CONFIG.load_test" do
           # figure expected urls...
           t = @project.target_for(:qunit)
           url = t.manifest_for(:language => :en).build!.entry_for('stylesheet.css').url
@@ -392,11 +392,11 @@ describe SC::Builder::Html do
           @target.config.combine_stylesheets = true 
           @target.config.load_tests = true 
           result = @builder.stylesheets_for_client
-          result.should_not =~ url
+          result.should =~ url
           
           # also works for @import
           result = @builder.stylesheets_for_client(:include_method => :import)
-          result.should_not =~ url
+          result.should =~ url
         end
           
       end
