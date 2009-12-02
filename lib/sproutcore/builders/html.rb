@@ -92,14 +92,7 @@ module SC
     # config settings.
     def expand_required_targets(target, opts = {})
       opts[:debug] = target.config.load_debug
-      
-      # do not get test targets for stylesheets when not building tests
-      if opts[:test].nil? && opts[:resource_type] == :stylesheet
-        opts[:test] = false
-      else
-        opts[:test] = target.config.load_tests
-      end
-
+      opts[:test] = target.config.load_tests
       opts[:theme] = true
       return target.expand_required_targets(opts)
     end
