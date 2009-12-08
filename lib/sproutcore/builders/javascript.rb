@@ -50,7 +50,7 @@ SC.LAZY_INSTANTIATION['#{target_name}'].push(
 
         # format factory as a function
         if entry.factory_format.to_sym == :function
-          lines << 'function(require,exports,module){'
+          lines << "function(require,exports,module,#{loader_name}){"
           lines << module_body.join('')
           lines << '}'
           
