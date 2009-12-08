@@ -205,13 +205,22 @@ namespace :manifest do
         e.original? && e.ext == 'js'
       end
 
+      libs = CONFIG.module_libs
+
       # add transform & tag with build directives.
       entries.each do |entry|
+        
+        module_name = entry.filename.ext
+        if libs
+          module_base = libs.find { |x| module_name =~ /#{x}\// }
+          module_name = module_name.gsub(module_base + '/') if module_base
+        end
+        
         entry = MANIFEST.add_transform entry,
           :lazy_instantiation => CONFIG.lazy_instantiation,
           :notify_onload => CONFIG.use_loader,
           :filename      => ['source', entry.filename].join('/'),
-          :module_name   => entry.filename.ext,
+          :module_name   => module_name,
           :use_modules   => CONFIG.use_modules,
           :use_loader    => CONFIG.use_loader,
           :factory_format => CONFIG.factory_format,
