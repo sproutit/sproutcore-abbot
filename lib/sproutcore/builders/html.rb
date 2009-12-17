@@ -159,6 +159,11 @@ module SC
       return self
     end
 
+    # for tests this becomes 'test'
+    def builder_mode
+      SC.build_mode
+    end
+      
     private
     
     # Renders an entry as a partial.  This will insert the results inline

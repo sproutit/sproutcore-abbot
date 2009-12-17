@@ -129,7 +129,22 @@ module SC
         timestamps.max
       elsif composite?
 
-        source_entries.map { |e| e.timestamp || 0 }.max || Time.now.to_i
+        ret = source_entries.map do |e| 
+          seen.include?(e) ? 0 : (e.timestamp(seen) || 0)
+        end
+
+        # look for any dependent modules.  if they change, this guy must 
+        # also...
+        
+        # optional extra entries used to compute the timestamp.  this is 
+        # needed for the package_info.js which may need to lookup files 
+        # from other targets
+        ret += (self.timestamp_entries || []).map do |e| 
+          seen.include?(e) ? 0 : (e.timestamp(seen) || 0)
+        end
+        
+        ret.max || Time.now.to_i
+        
       else
         File.exist?(source_path) ? File.mtime(source_path).to_i : 0
       end
@@ -230,59 +245,66 @@ module SC
       if paths = self.source_paths
         paths.each do |path|
           next unless File.exist?(path)
-          state = :start
-          quote = nil
-          File.readlines(path).each do |line|
-            scanner = StringScanner.new line
-            loop do
-              scanner.skip /\s*/
-              break if scanner.eos?
+          SC.logger.info "scanning #{path}"
+          results = target.file_attr('scan_module', path) do
+            ret   = []
+            state = :start
+            quote = nil
+            File.readlines(path).each do |line|
+              scanner = StringScanner.new line
+              loop do
+                scanner.skip /\s*/
+                break if scanner.eos?
 
-              case state
-              when :start
-                # quoted strings
-                quote = scanner.scan(/["']/)
-                if not quote.nil?
-                  state = :string
-                  next
+                case state
+                when :start
+                  # quoted strings
+                  quote = scanner.scan(/["']/)
+                  if not quote.nil?
+                    state = :string
+                    next
+                  end
+
+                  # C++-style comments
+                  next if not scanner.scan(%r{//.*}).nil?
+
+                  # block comments
+                  if scanner.scan(%r{/\*})
+                    state = :block
+                    next
+                  end
+
+                  state = :code # beyond start of file
+
+                when :string
+                  # NOTE: allows multiple directives in multiline strings
+                  directive = scanner.scan %r{(?:[^#{quote}\\]|\\.)*}
+                  ret << directive unless directive.nil?
+
+                  # directives must be terminated with a semicolon
+                  state = :semi if not scanner.scan(%r{#{quote}}).nil?
+
+                when :semi
+                  state = scanner.skip(/;/).nil? ? :code : :start
+
+                # while in block just look for closing block statement
+                when :block
+                  scanner.skip %r{(?:[^*]|\*(?!/))*};
+                  state = :start if not scanner.scan(%r{\*/}).nil?
+
+                when :code
+                  break # nothing to do
                 end
-
-                # C++-style comments
-                next if not scanner.scan(%r{//.*}).nil?
-
-                # block comments
-                if scanner.scan(%r{/\*})
-                  state = :block
-                  next
-                end
-
-                state = :code # beyond start of file
-
-              when :string
-                # NOTE: allows multiple directives in multiline strings
-                directive = scanner.scan %r{(?:[^#{quote}\\]|\\.)*}
-                if not directive.nil?
-                  args = directive.split(' ')
-                  directive = args.shift
-                  yield(directive, args)
-                end
-
-                # directives must be terminated with a semicolon
-                state = :semi if not scanner.scan(%r{#{quote}}).nil?
-
-              when :semi
-                state = scanner.skip(/;/).nil? ? :code : :start
-
-              # while in block just look for closing block statement
-              when :block
-                scanner.skip %r{(?:[^*]|\*(?!/))*};
-                state = :start if not scanner.scan(%r{\*/}).nil?
-
-              when :code
-                break # nothing to do
               end
             end
+            ret
           end
+          
+          results.each do |args|
+            args = args.split(' ')
+            yield(args.shift, args)
+          end
+            
         end
       end
     end
@@ -390,6 +412,13 @@ module SC
               self.use_modules = (args[1] != 'false')
             when 'loader'
               self.use_loader  = self.notify_onload = (args[1] != 'false')
+              
+            # use exports foo bar blah allows defining exported values without
+            # actually generating glue code
+            when 'exports'
+              puts "exports = #{args * ","}"
+              self.exports += args[1..-1].map { |x| [x,x,:manual] }
+              
             when 'strict'
               # do nothing
               
@@ -454,7 +483,7 @@ module SC
     def exports=(exp) 
       self[:exports] = exp
     end
-    
+      
     def module_preamble
       return '' if !self.use_modules
       lines = []
@@ -464,7 +493,14 @@ module SC
       self.imports.each do |import|
         import, as_symbol = import # split array
         package_name, module_name = import.split(':')
-        bundle_target = self.target.target_for(package_name)
+
+        if package_name == 'default'
+          default_package_name = self.target.config.module_loader 
+          bundle_target = self.target.target_for(default_package_name)
+        else
+          bundle_target = self.target.target_for(package_name)
+        end
+        
         
         if bundle_target
           
@@ -491,7 +527,7 @@ module SC
             end
 
           else
-            SC.logger.warn("cannot find module to import #{import}")
+            SC.logger.warn("#{self.module_name}: cannot find module to import #{import}")
           end
             
         else
@@ -502,7 +538,12 @@ module SC
       
       # setup export variables
       if self.exports.size>0
-        lines << "var #{self.exports.map { |x| x[0].split('.').first }*','};"
+        exp_lines = self.exports.map do |x|
+          (x[2] == :manual) ? nil : x[0].split('.').first
+        end
+        exp_lines = exp_lines.uniq.compact
+        
+        lines << "var #{exp_lines*','};" if exp_lines.size>0
       end
       
       return lines * ''
@@ -513,11 +554,12 @@ module SC
       return '' if !self.use_modules
       lines = [';'] # always add semicolon in case module code is missing one
       self.exports.each do |export|
+        next if export[2] == :manual
         lines << "exports.#{export[1]} = #{export[0]};\n"
       end
       
       if self.global_exports && self.global_exports.size>0
-        lines << "var $g__ = require('system').global;\nif ($g__) {\n"
+        lines << "var $g__ = require('default:system').global;\nif ($g__) {\n"
         self.global_exports.each do |export|
           lines << "exports['#{export[1]}'] = #{export[0]};\n"
         end
