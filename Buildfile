@@ -97,7 +97,7 @@ mode :all do
     # loader, you may also choose the name of the loader that will be used.
     # defaults to "tiki".
     :use_modules    => false,
-    :module_loader  => 'tiki',
+    :module_loader  => :tiki,
     :factory_format => :text,  # or function
     
     # if set to true then the index.html will build into the global language
@@ -135,14 +135,14 @@ mode :debug do
 
     # In debug mode, we want to simply compute the build number each time
     # to ensure the latest version is always loaded.
-    :build_number     => :current,
+    #:build_number     => :current,
 
     # Instructs the URL builders to include a timestamp token at the end of 
     # urls.  This option is only useful in development mode since browsers
     # will respect the timestamp token as a way to unique the url.  This
     # should not be used in production as some proxies on the internet do
     # not respect tokens.
-    :timestamp_urls  =>  true,
+    #:timestamp_urls  =>  true,
     
     # Do not pack javascripts in development mode, we want each file to 
     # load independently.

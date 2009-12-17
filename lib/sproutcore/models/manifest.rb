@@ -74,9 +74,11 @@ module SC
     
     # Builds the manifest if it has not been built yet.
     def build!
+      
       prepare!
       if !@is_built
         @is_built = true
+        target.begin_attr_changes
         if target.buildfile.task_defined? 'manifest:build'
           target.buildfile.invoke 'manifest:build',
             :manifest => self,
@@ -84,6 +86,7 @@ module SC
             :config => self.target.config,
             :project => self.target.project
         end
+        target.end_attr_changes
       end
       return self
     end

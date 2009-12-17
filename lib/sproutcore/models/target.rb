@@ -323,6 +323,7 @@ module SC
       else
         @attr_cache_has_changes = false
         if @file_attr_cache
+          SC.logger.info ">>>> #{target_name}/#{File.basename(file_attr_cache_path)}"
           FileUtils.mkdir_p(File.dirname(file_attr_cache_path))
           fp = File.open(file_attr_cache_path, 'w+')
           fp.write @file_attr_cache.to_yaml
@@ -354,8 +355,6 @@ module SC
       attr_mtime = attr_info['mtime'].to_i
       path_mtime = File.exists?(path) ? File.mtime(path).to_i : 0
       if attr_mtime.nil? || (path_mtime != attr_mtime)
-        SC.logger.debug "MISS file_attr_cache:#{attr_name}: #{File.basename(path)} path_mtime=#{path_mtime} attr_mtime=#{attr_mtime}"
-        
         value = attr_info['value'] = yield
         attr_info['mtime'] = path_mtime
         _write_file_attr_cache
@@ -405,6 +404,7 @@ module SC
         begin_attr_changes
         digests = Dir.glob(File.join(source_root, '**', '*')).map do |path|
           file_attr(:digest, path) do
+            SC.logger.info "computing digest: #{path.gsub(source_root,'')}"
             allowed = File.exists?(path) && !File.directory?(path)
             allowed = allowed && !target_directory?(path)
             allowed ? Digest::SHA1.hexdigest(File.read(path)) : nil
@@ -419,10 +419,8 @@ module SC
         # causing infinite loops.  Normally this should not be necessary, but
         # we put this here to gaurd against misconfigured projects
         seen ||= []
-        
-        _targets = required_targets(:theme => true).sort do |a,b|
-          (a.target_name||'').to_s <=> (b.target_name||'').to_s
-        end
+
+        _targets = self.dependent_targets(:debug => config.load_debug, :test => config.load_tests, :theme => true)
         
         _targets.each do |ct|
           next if seen.include?(ct)
@@ -430,12 +428,22 @@ module SC
           seen << ct
           digests << ct.compute_build_number(seen, :force => true)
         end
-
+        
         # Finally digest the complete string - tada! build number
         build_number = Digest::SHA1.hexdigest(digests.join)
       end
       
       return build_number.to_s
+    end
+    
+    def dependent_targets(opts={})
+      ret = self.required_targets(opts).sort do |a,b|
+        (a.target_name||'').to_s <=> (b.target_name||'').to_s
+      end
+
+      ret += self.dynamic_required_targets(opts).sort do |a,b|
+        (a.target_name||'').to_s <=> (b.target_name||'').to_s
+      end
     end
     
     ######################################################

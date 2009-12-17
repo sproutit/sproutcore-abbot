@@ -34,6 +34,10 @@ module SC
       end
     end
     
+    def builder_mode
+      :test
+    end
+    
     def default_content_for_key; :body; end
     
     # Renders an individual test into a script tag.  Also places the test 

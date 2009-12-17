@@ -21,10 +21,12 @@ namespace :manifest do
     # staging_root is target.staging_root + language + build_number
     MANIFEST.staging_root = File.join(TARGET.staging_root, 
       MANIFEST.language.to_s, TARGET.build_number.to_s)
+#      MANIFEST.language.to_s, 'current')
       
     # cache_root is target.cache_root + language + build_number
     MANIFEST.cache_root = File.join(TARGET.cache_root, 
       MANIFEST.language.to_s, TARGET.build_number.to_s)
+#      MANIFEST.language.to_s, 'current')
       
     # url_root
     MANIFEST.url_root = 
@@ -205,15 +207,33 @@ namespace :manifest do
         e.original? && e.ext == 'js'
       end
 
-      libs = CONFIG.module_libs
+      libs = Array(CONFIG.module_lib)
 
       # add transform & tag with build directives.
       entries.each do |entry|
         
+        # if module_lib is defined, then only include JavaScript from 
+        # those directories (or those in an lproj)
         module_name = entry.filename.ext
-        if libs
-          module_base = libs.find { |x| module_name =~ /#{x}\// }
-          module_name = module_name.gsub(module_base + '/') if module_base
+        if libs.size>0 && !(module_name =~ /^__(postamble|preamble)__$/)
+          found_lib = libs.find do |x| 
+            reg = /^#{Regexp.escape(x)}\//
+            lproj_reg = /^lproj\/#{Regexp.escape(x)}\//
+          
+            if module_name =~ reg
+              module_name = module_name.sub(reg, '')
+              true
+            
+            elsif module_name =~ lproj_reg
+              module_name = module_name.sub(lproj_reg, '')
+              true
+            else
+              
+              false
+            end
+          end
+
+          next unless found_lib
         end
         
         entry = MANIFEST.add_transform entry,
@@ -331,17 +351,20 @@ namespace :manifest do
             
           entries << package_info
         end
-        
-        # if we're using modules, then add a generated entries module as well
-        has_exports = !!entries.find { |e| e.module_name == 'package' }
-        if CONFIG.use_modules && !has_exports && ((entries.size == 0) || (entries.find { |e| e.use_modules }))
-          package_exports = MANIFEST.add_entry 'package_exports.js',
-            :build_task      => 'build:package_exports',
+          
+        # add a package_info.js if the loader is enabled for this package
+        package_info = nil
+        if CONFIG.use_loader
+
+          package_info = MANIFEST.add_entry 'package_info.js',
+            :build_task      => 'build:package_info',
             :resource        => resource_name,
             :entry_type      => :javascript,
             :source_entries  => entries.dup,
-            :composite       => true
-          entries << package_exports
+            :composite       => true,
+            :package_info    => true # used for timestamp building
+            
+          entries << package_info
         end
           
         ordered_entries = SC::Helpers::EntrySorter.sort(entries, pf)

@@ -154,6 +154,7 @@ module SC
           "Expires"        => (cacheable ? (Time.now + ONE_YEAR) : Time.now).httpdate
         }
         [200, headers, File.open(build_path, 'rb')]
+        
       end
       
       attr_reader :project
@@ -249,7 +250,7 @@ module SC
       end
               
       def target_for(url)
-
+        
         # get targets
         targets = project.targets.values.dup
         targets.each { |t| t.prepare! }
@@ -264,6 +265,7 @@ module SC
           ret = targets.find { |t| t.url_root == url || t.index_root == url }
           url_parts.pop
         end
+              
         return ret 
       end
       
@@ -295,9 +297,10 @@ module SC
         # /foo/en/build_number - /foo/en/build_number/index.html
         # /foo/en/CURRENT/resource-name
         matched = url.match(/^#{Regexp.escape target.index_root}(\/([^\/\.]+))?(\/([^\/\.]+))?(\/(.*))?$/)
+        
         unless matched.nil?
           matched_language = matched[2] || target.config.preferred_language
-          
+                    
           matched_build_number = matched[4]
           if matched_build_number.blank? || matched_build_number == 'current'
             matched_build_number = target.build_number

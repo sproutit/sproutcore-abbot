@@ -39,6 +39,7 @@ namespace :entry do
     # Construct some easier paths if needed
     ENTRY.build_path ||= File.join(MANIFEST.build_root, filename_parts)
     ENTRY.url ||= [MANIFEST.url_root, filename_parts].join('/')
+    ENTRY.current_url ||= [MANIFEST.current_url_root, filename_parts] * '/'
     
     # Fill in a default build task
     ENTRY.build_task ||= 'build:copy'

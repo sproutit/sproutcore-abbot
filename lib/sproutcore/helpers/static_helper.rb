@@ -125,7 +125,7 @@ module SC
 
       # Detects and includes any bootstrap code
       #
-      def bootstrap 
+      def bootstrap(opts = {})
         
         ret = []
         
@@ -145,10 +145,17 @@ module SC
 
         # Emit a standard environment hash if we are using a module_loader
         if target.config.bootstrap_env
-          env = { 
-            'mode' => SC.env.build_mode,
-            'platform' => 'browser' # make an option later
-          }.to_json
+
+          env = {};
+          if opts[:env]
+            opts[:env].each { |k,v| env[k.to_s] = v }
+          end
+          
+          env['mode'] ||= builder_mode
+          env['app']  ||= target.target_name.to_s[1..-1]
+          env['lang'] ||= self.manifest.language
+
+          env = env.to_json
           ret << %(<script type="text/javascript">\nENV = #{env};\n</script>)
         end
         
