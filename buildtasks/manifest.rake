@@ -339,23 +339,25 @@ namespace :manifest do
         # sort entries
         pf = (entry_name == 'javascript.js') ? %w(source/lproj/strings.js source/core.js source/utils.js) : []
 
-        # add a bundle_info.js if needed
-        if CONFIG.use_loader && ((entries.size == 0) || (entries.find { |e| e.use_loader }))
-          package_info = MANIFEST.add_entry 'package_info.js',
-            :build_task      => 'build:package_info',
-            :resource        => resource_name,
-            :entry_type      => :javascript,
+        # if we're using modules, then add a generated index module if needed
+        has_index = !!entries.find { |e| e.module_name == 'index' }
+        if CONFIG.use_modules && !has_index
+          package_exports = MANIFEST.add_entry 'package_exports.js',
+            :build_task => 'build:package_exports',
+            :resource   => resource_name,
+            :entry_type => :javascript,
             :source_entries  => entries.dup,
             :module_name     => 'index',
             :composite       => true
-            
-          entries << package_info
+
+          entries << package_exports
         end
-          
-        # add a package_info.js if the loader is enabled for this package
+
+        # Add a package_info to register with the loader, unless the loader
+        # is disabled.  Note that this must come AFTER package_exports is 
+        # added to ensure that the exports are generated also.
         package_info = nil
         if CONFIG.use_loader
-
           package_info = MANIFEST.add_entry 'package_info.js',
             :build_task      => 'build:package_info',
             :resource        => resource_name,

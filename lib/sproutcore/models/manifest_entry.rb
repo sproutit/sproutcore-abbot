@@ -477,7 +477,7 @@ module SC
         end
         ret = ret.compact.uniq
       end
-      return ret
+      return ret || []
     end
     
     def exports=(exp) 
