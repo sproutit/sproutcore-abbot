@@ -56,7 +56,7 @@ module SC
       has_main = false
       
       lines = []
-      lines << "#{loader_name}.module('#{package_name}:package', function(require, exports, module) {\n"
+      lines << "#{loader_name}.module('#{package_name}:index', function(require, exports, module) {\n"
       lines << "var m;\n"
       entries.each do |e| 
         next if e.package_exports.nil?
