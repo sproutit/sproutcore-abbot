@@ -151,12 +151,13 @@ module SC
             opts[:env].each { |k,v| env[k.to_s] = v }
           end
           
-          env['mode'] ||= builder_mode
-          env['app']  ||= target.target_name.to_s[1..-1]
-          env['lang'] ||= self.manifest.language
-
+          env['mode']  ||= builder_mode
+          env['app']   ||= target.target_name.to_s[1..-1]
+          env['lang']  ||= self.manifest.language
+          env['theme'] ||= theme_name(:default => 'sc-theme')
+          
           env = env.to_json
-          ret << %(<script type="text/javascript">\nENV = #{env};\n</script>)
+          ret << %(<script type="text/javascript">\nvar ENV = #{env};\n</script>)
         end
         
         return ret * "\n"
