@@ -155,11 +155,18 @@ namespace :manifest do
         # if this is a js file, add js transform first to handle sc_static()
         # etc.
         if entry.ext == 'js'
+          
+          use_modules = CONFIG.tests_use_modules
+          use_modules = CONFIG.use_modules if use_modules.nil?
+          
+          use_loader  = CONFIG.tests_use_loader
+          use_loader  = CONFIG.use_loader if use_loader.nil?
+          
           entry = MANIFEST.add_transform entry,
             :build_task => 'build:javascript',
             :module_name   => entry.filename.ext,
-            :use_modules => CONFIG.use_modules,
-            :use_loader  => CONFIG.use_loader,
+            :use_modules => use_modules,
+            :use_loader  => use_loader,
             :factory_format => :function
           entry.discover_build_directives!(true)
         end
@@ -343,12 +350,14 @@ namespace :manifest do
         has_index = !!entries.find { |e| e.module_name == 'index' }
         if CONFIG.use_modules && !has_index
           package_exports = MANIFEST.add_entry 'package_exports.js',
-            :build_task => 'build:package_exports',
-            :resource   => resource_name,
-            :entry_type => :javascript,
+            :build_task      => 'build:package_exports',
+            :resource        => resource_name,
+            :entry_type      => :javascript,
             :source_entries  => entries.dup,
             :module_name     => 'index',
-            :composite       => true
+            :composite       => true,
+            :use_loader      => true,
+            :use_modules     => true
 
           entries << package_exports
         end
@@ -364,6 +373,8 @@ namespace :manifest do
             :entry_type      => :javascript,
             :source_entries  => entries.dup,
             :composite       => true,
+            :use_loader      => true,
+            :use_modules     => false,
             :package_info    => true # used for timestamp building
             
           entries << package_info
@@ -371,7 +382,7 @@ namespace :manifest do
           
         ordered_entries = SC::Helpers::EntrySorter.sort(entries, pf)
         
-        MANIFEST.add_composite entry_name,
+        composite_entry = MANIFEST.add_composite entry_name,
           :build_task      => 'build:combine',
           :source_entries  => entries,
           :top_level_lazy_instantiation => CONFIG.lazy_instantiation, 
