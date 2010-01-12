@@ -25,11 +25,11 @@ module SC
       package_name = entry.manifest.package_name
       desc = entry.manifest.bundle_info(:package_info => entry)
       lines = []
-      lines << ";#{loader_name}.register('#{package_name}', #{desc.to_json});\n"
+      lines << ";#{loader_name}.register('#{package_name}', #{JSON.pretty_generate(desc)});\n"
       
       # make sure all dependents are loaded into the global context if this
       # package is not module aware
-      if !entry.target.use_modules
+      if !entry.target.use_modules && desc['depends']
         lines << "#{loader_name}.global('#{package_name}');\n"
       end
       
@@ -78,7 +78,7 @@ module SC
       # if this is a loadable target (i.e. an app), and a main() is defined,
       # then try to call it automatically when the package becomes ready.
       if entry.target.loadable?
-        lines << "\n#{loader_name}.async('#{package_name}').then(function() {\n  #{loader_name}.require('#{package_name}:package').main();\n});\n\n"
+        lines << "\n#{loader_name}.main('#{package_name}', 'main');\n\n"
       end
       
       

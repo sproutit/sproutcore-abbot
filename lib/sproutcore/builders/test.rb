@@ -46,18 +46,20 @@ module SC
     def render_jstest(entry)
       lines = readlines(entry.staging_path)
       pathname = entry.staging_path.gsub(/^.+\/staging\//,'').gsub(/"/, '\"')
-      lines.unshift %[<script type="text/javascript">\nif (typeof SC !== "undefined") {\n  SC.mode = "TEST_MODE";\n  SC.filename = "#{pathname}"; \n}\n]
       
+      # wrap in a loader function if needed
       if entry.use_modules
         loader_name = entry.target.config.module_loader
         package_name = entry.manifest.package_name 
         lines.push %[#{loader_name}.async('#{package_name}').then(function() {\n  #{loader_name}.require('#{package_name}:#{entry.module_name}'); \n});]
         
       else
-        lines.unshift %[(function() {\n]
+        lines.unshift %[if (typeof SC !== "undefined") {\n  SC.mode = "TEST_MODE";\n  SC.filename = "#{pathname}"; \n}\n(function() {\n]
         lines.push    %[\n})();]
       end
       
+      # wrap in a script tag
+      lines.unshift %[<script type="text/javascript">\n]
       lines.push %[\n</script>\n]
       
       @content_for_final = (@content_for_final || '') + lines.join("")
