@@ -416,7 +416,6 @@ module SC
             # use exports foo bar blah allows defining exported values without
             # actually generating glue code
             when 'exports'
-              puts "exports = #{args * ","}"
               self.exports += args[1..-1].map { |x| [x,x,:manual] }
               
             when 'strict'
