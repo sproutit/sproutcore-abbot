@@ -299,6 +299,9 @@ module SC
     
     # path to attr_cache file
     def file_attr_cache_path
+
+      # make sure the cache_root is set
+      self.prepare! if !self.prepared?
       @file_attr_cache_path ||= (self.cache_root / '__file_attr_cache.yml')
     end
     

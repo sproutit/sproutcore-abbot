@@ -97,6 +97,7 @@ module SC
 
         # collect urls from entries
         urls = []
+        
         combine_javascript = t.config.combine_javascript
         combined_entries(t, :javascript, opts, 'javascript.js', 'javascript-packed.js') do |cur_target, cur_entry|
           

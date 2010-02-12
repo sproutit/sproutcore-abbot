@@ -67,8 +67,8 @@ describe "manifest:prepare_build_tasks:combine package_exports" do
       @target.config.use_modules.should be_true
     end
       
-    it "should NOT generate a package_exports entry" do
-      @manifest.entry_for('package_exports.js').should be_nil
+    it "should generate a package_exports entry" do
+      @manifest.entry_for('package_exports.js').should_not be_nil
     end
     
   end

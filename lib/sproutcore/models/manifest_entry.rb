@@ -117,7 +117,8 @@ module SC
     
     # Returns a timestamp for when this file was last changed.  This will
     # reach back to the source entries, finding the latest original entry.
-    def timestamp
+    def timestamp(seen=nil)
+      
       if dynamic? # MUST check for this first...
         timestamps = targets.map do |t|
           timestamps2 = t.manifest_for(variation).build!.entries.map do |e|
@@ -129,6 +130,8 @@ module SC
         timestamps.max
       elsif composite?
 
+        seen = [self] if seen.nil?
+        
         ret = source_entries.map do |e| 
           seen.include?(e) ? 0 : (e.timestamp(seen) || 0)
         end

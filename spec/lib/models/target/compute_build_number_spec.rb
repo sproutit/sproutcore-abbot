@@ -118,7 +118,8 @@ describe SC::Target, 'compute_build_number' do
   it "recursively required project should not cause an error" do
     recursive = fixture_project(:recursive_project)
     target = recursive.target_for :sproutcore
-    lambda { target.compute_build_number }.should_not raise_error
+    #lambda { target.compute_build_number }.should_not raise_error
+    target.compute_build_number
   end
   
 end

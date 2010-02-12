@@ -101,7 +101,9 @@ describe SC::Builder::PackageInfo do
     
     # let's get the package info JSON and verifiy it
     require 'json'
-    info = code.scan(/#{Regexp.escape("tiki.register('package_test',")}\s?(\{.+\})\s?\);/).flatten.first
+    
+    # make a single line for regex
+    info = code.gsub("\n", '').scan(/#{Regexp.escape("tiki.register('package_test',")}\s?(\{.+\})\s?\);/).flatten.first
     info = JSON.parse(info)
     info.should_not be_nil
     
