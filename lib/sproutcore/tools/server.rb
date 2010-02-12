@@ -40,6 +40,11 @@ module SC
         IRB.start
       else
         SC.logger << "SproutCore v#{SC::VERSION} Development Server\n"
+        
+        # Always clear tmp to keep file sizes to a minimum
+        tmp_path = project.project_root / 'tmp'
+        FileUtils.rm_rf(tmp_path) if File.exist?(tmp_path)
+      
         SC::Rack::Service.start(options.merge(:project => project))
       end
     end
