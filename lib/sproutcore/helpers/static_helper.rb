@@ -41,7 +41,7 @@ module SC
         combined_entries(t, :stylesheet, opts, 'stylesheet.css', 'stylesheet-packed.css') do |cur_target, cur_entry|
           # include either the entry URL or URL of ordered entries
           # depending on setup
-          if combine_stylesheets
+          if cur_target.config.combine_stylesheets
             urls << { :id => cur_entry.script_id, :url => cur_entry.cacheable_url }
           else
             urls += cur_entry.ordered_entries.map { |e| 
