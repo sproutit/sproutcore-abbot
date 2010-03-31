@@ -22,15 +22,15 @@ module SC
       
       # emit a bundle definition for the current target
       loader_name = entry.target.config.module_loader
-      package_name = entry.manifest.package_name
+      package_id = entry.manifest.package_id
       desc = entry.manifest.bundle_info(:package_info => entry)
       lines = []
-      lines << ";#{loader_name}.register('#{package_name}', #{JSON.pretty_generate(desc)});\n"
+      lines << ";#{loader_name}.register('#{package_id}', #{JSON.pretty_generate(desc)});\n"
       
       # make sure all dependents are loaded into the global context if this
       # package is not module aware
-      if !entry.target.use_modules && desc['depends']
-        lines << "#{loader_name}.global('#{package_name}');\n"
+      if !entry.target.use_modules && desc['dependencies']
+        lines << "#{loader_name}.global('#{package_id}');\n"
       end
       
       if !entry.target.config.combine_javascript
@@ -51,12 +51,13 @@ module SC
       entries = entry.source_entries.reject { |e| e.exports.nil? }
       
       package_name = entry.target.package_name
-      loader_name = entry.target.config.module_loader
+      package_id   = entry.manifest.package_id
+      loader_name  = entry.target.config.module_loader
       
       has_main = false
       
       lines = []
-      lines << "#{loader_name}.module('#{package_name}:index', function(require, exports, module) {\n"
+      lines << "#{loader_name}.module('#{package_id}:index', function(require, exports, module) {\n"
       lines << "var m;\n"
       entries.each do |e| 
         next if e.package_exports.nil?

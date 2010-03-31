@@ -46,7 +46,7 @@ SC.LAZY_INSTANTIATION['#{target_name}'].push(
         module_body << entry.module_postamble
 
         lines = []
-        lines << %[#{loader_name}.module('#{entry.manifest.package_name}:#{entry.module_name}',]
+        lines << %[#{loader_name}.module('#{entry.manifest.package_id}:#{entry.module_name}',]
 
         # format factory as a function
         if entry.factory_format.to_sym == :function

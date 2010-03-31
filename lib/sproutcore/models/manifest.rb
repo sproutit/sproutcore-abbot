@@ -359,6 +359,10 @@ module SC
       target.package_name
     end
     
+    def package_id
+      "::#{target.package_name}/#{target.build_number}"
+    end
+    
     # Returns a HashStruct with a valid bundle_info for the bundle that you
     # can put inside a bundle_info.js.  This has info on loading the main
     # javascript.js and stylesheet.css resources for the bundle ONLY.
@@ -367,13 +371,23 @@ module SC
     #  :scripts     => true to include dependent scripts (def true)
     #  :stylesheets => true to include dependent stylesheets (def true)
     #  :depends     => true to include dependencies and defs for bundles  
+    #  :external    => true to generate bundle_info as an external ref
+    #  :private     => true to mark as private
     #
     def bundle_info(opts ={})
       
       package_info_entry = opts[:package_info]
-      bundle_info = {} # here is what we will build
+      bundle_info = {
+        'name' => package_name,
+        'version' => '~' # ruby build tools do not support semantic versioning
+      } # here is what we will build
+      
+      bundle_info['tiki:external'] = true if opts[:external]
+      bundle_info['tiki:private']  = true  if opts[:private]
       
       build! # make sure we are ready...
+      
+      resources = [];
       
       # get scripts
       if opts[:scripts].nil? || opts[:scripts]
@@ -382,11 +396,15 @@ module SC
         scripts = e.nil? ? [] : (should_combine ? [e] : e.ordered_entries)
         scripts ||= []
         scripts = scripts.compact.select { |e| e.use_loader }
-        scripts = scripts.map { |e| 
-          { 'id' => e.script_id, 'url' => e.cacheable_url } 
-        }.compact
-        
-        bundle_info['scripts'] = scripts if scripts.size>0
+        scripts.compact.each do |e| 
+          resources << { 
+            'id'   => e.script_id,
+            'name' => e.filename,
+            'type' => 'script', 
+            'url'  => e.cacheable_url 
+          }
+           
+        end
       end
 
       if opts[:stylesheets].nil? || opts[:stylesheets]
@@ -394,12 +412,19 @@ module SC
         e = entry_for('stylesheet.css') || entry_for('stylesheet.css', :hidden => true)
         stylesheets = e.nil? ? [] : (should_combine ? [e] : e.ordered_entries)
         stylesheets ||= []
-        stylesheets = stylesheets.compact.map { |e| 
-          { 'id' => e.script_id, 'url' => e.cacheable_url }
-        }.compact
         
-        bundle_info['stylesheets'] = stylesheets if stylesheets.size>0
+        stylesheets.compact.each do |e|
+          resources << {
+            'id' => e.script_id,
+            'name' => e.filename,
+            'type' => 'stylesheet',
+            'url'  => e.cacheable_url
+          }
+        end
+        
       end
+      
+      bundle_info['tiki:resources'] = resources if resources.size>0
       
       if opts[:depends].nil? || opts[:depends]
         
@@ -411,21 +436,28 @@ module SC
         
         # get all required target names.  these go in the depends hash
         targets = target.required_targets(t_opts) || []
-        depends = targets.map { |t| t.package_name }.compact
-        bundle_info['depends'] = depends if depends.size>0
+
+        depends = {}
+        targets.each do |t| 
+          next if t.nil?
+          depends[t.package_name] = '~'
+        end
+        
+        bundle_info['dependencies'] = depends if depends.size>0
         
         # expand to include dynamic required target and build bundle info 
         # also
-        targets += target.dynamic_required_targets(t_opts) || []
-        targets = targets.compact.uniq.reject { |t| t == target }
-        if targets.size > 0
-          bundles = {}
-          targets.each do |t|
-            bundles[t.package_name] = 
-              t.manifest_for(self.variation).bundle_info(:depends => false)
-          end
-          bundle_info['packages'] = bundles
-        end
+        ## TODO: Handle dynamic required targets
+        # targets += target.dynamic_required_targets(t_opts) || []
+        # targets = targets.compact.uniq.reject { |t| t == target }
+        # if targets.size > 0
+        #   bundles = {}
+        #   targets.each do |t|
+        #     bundles[t.package_name] = 
+        #       t.manifest_for(self.variation).bundle_info(:depends => false)
+        #   end
+        #   bundle_info['packages'] = bundles
+        # end
       end
         
       return bundle_info
