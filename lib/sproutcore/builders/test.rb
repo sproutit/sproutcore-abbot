@@ -51,7 +51,7 @@ module SC
       if entry.use_modules
         loader_name = entry.target.config.module_loader
         package_name = entry.manifest.package_name 
-        lines.push %[#{loader_name}.async('#{package_name}').then(function() {\n  #{loader_name}.require('#{package_name}:#{entry.module_name}'); \n});]
+        lines.push %[#{loader_name}.require.ensure('#{package_name}', function() {\n  #{loader_name}.require('#{package_name}:#{entry.module_name}'); \n});]
         
       else
         lines.unshift %[if (typeof SC !== "undefined") {\n  SC.mode = "TEST_MODE";\n  SC.filename = "#{pathname}"; \n}\n(function() {\n]
