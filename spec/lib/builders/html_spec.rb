@@ -297,16 +297,20 @@ describe SC::Builder::Html do
           # figure expected urls...
           urls = %w(req_target_1 req_target_2 html_test).map do |target_name|
             t = @project.target_for(target_name)
+            
+            # make sure each target is in a known state
+            t.config.combine_stylesheets = false
+            t.config.load_debug = false
+            t.config.load_tests = false
+            
+            # return the urls
             e = t.manifest_for(:language => :en).build!.entry_for('stylesheet.css')
             e.ordered_entries.map { |e| e.url }
+            
           end
           urls.flatten!
           
-          @target.config.combine_stylesheets = false 
-          @target.config.load_debug = false
-          @target.config.load_tests = false
-          
-          result = @builder.stylesheets_for_client
+          result = @builder.stylesheets_for_client :logit => true
           expect_links(result, urls)
   
           result = @builder.stylesheets_for_client(:include_method => :import)
