@@ -15,7 +15,7 @@
 
 frameworks/sproutcore:
   repo: "git://github.com/sproutit/sproutcore.git"
-  branch: "master"
+  branch: "tiki"
   
 
 frameworks/tiki:
