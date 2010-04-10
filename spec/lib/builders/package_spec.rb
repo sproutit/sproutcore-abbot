@@ -27,7 +27,7 @@ describe SC::Builder::PackageExports do
     code = File.read(path)
     
     # verify key points...
-    code.should =~ /#{Regexp.escape("tiki.module('module_test:index'")}/
+    code.should =~ /#{Regexp.escape("tiki.module('#{@entry.manifest.package_id}:index'")}/
     
     # should only define exports for foo & bar
     # other exports are defined in the fixture but not at package level
@@ -95,38 +95,52 @@ describe SC::Builder::PackageInfo do
     File.exist?(path).should be_true
     
     code = File.read(path)
+    
+    #puts code
+    
 
     # should register package info
-    code.should =~ /#{Regexp.escape("tiki.register('package_test',")}/
+    package_id = @entry.manifest.package_id
+    code.should =~ /#{Regexp.escape("tiki.register('#{package_id}',")}/
+
+    # should register dynamic dependency separately
+    # should mention that this is external...
+    code.gsub("\n", '').should =~ /#{Regexp.escape("tiki.register('::req_target_2")}.+"tiki:external":\s+true/
     
     # let's get the package info JSON and verifiy it
     require 'json'
     
     # make a single line for regex
-    info = code.gsub("\n", '').scan(/#{Regexp.escape("tiki.register('package_test',")}\s?(\{.+\})\s?\);/).flatten.first
+    info = code.gsub("\n", '').scan(/#{Regexp.escape("tiki.register('#{package_id}',")}\s?(\{.+\})\s?\);.+tiki\./).flatten.first
+    
     info = JSON.parse(info)
     info.should_not be_nil
     
     # should explicitly name required dependency
-    info['depends'].should == ["req_target_1"] # required dependency
+    info['dependencies'].should == { "req_target_1" => '~' } # hard dependency
 
-    # should include package info for required and dynamic
-    info['packages'].keys.sort.should == %w(req_target_1 req_target_2)
+    # verify resources - collect scripts & styles
+    info_resources = info['tiki:resources'];
+    info_resources.should_not be_nil
 
-    # verify scripts
-    info_scripts = info['scripts']
+    info_scripts = []
+    info_styles  = []
+    
+    info_resources.each do |x|
+      if x['type'] == 'script'
+        info_scripts << x
+      elsif x['type'] == 'stylesheet'
+        info_styles << x
+      end
+    end
+
     info_scripts.map { |x| x['url'] }.sort.should == script_entries.map { |x| x.cacheable_url }.sort
-
     info_scripts.map { |x| x['id'] }.sort.should == script_entries.map { |x| x.script_id }.sort
 
     # verify stlyes
-    info_styles = info['stylesheets']
-    info_urls   = info_styles.map { |x| x['url'] }.sort
-    info_urls.should == style_entries.map { |x| x.cacheable_url }.sort
+    info_styles.map { |x| x['url'] }.sort.should == style_entries.map { |x| x.cacheable_url }.sort
+    info_styles.map { |x| x['id'] }.sort.should == style_entries.map { |x| x.script_id }.sort
 
-    info_ids    = info_styles.map { |x| x['id'] }.sort
-    info_ids.should == style_entries.map { |x| x.script_id }.sort
-    
     # should register script ID
     if @target.config.combine_javascript == false
       code.should =~ /#{Regexp.escape("tiki.script('#{@entry.script_id}')")}/
@@ -151,7 +165,7 @@ describe SC::Builder::PackageInfo do
     script_entries, style_entries = prep
     script_entries.size.should == 1
     style_entries.size.should == 1
-
+  
     verify_entry(script_entries, style_entries)
   end
   
