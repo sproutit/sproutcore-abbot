@@ -13,6 +13,13 @@ module SC
   # loaded by the application or framework doing the loading.
   class Builder::PackageInfo < Builder::Base
     
+    def emit_package_info(lines, loader_name, manifest, external) 
+      package_id = manifest.package_id
+      desc       = manifest.bundle_info(:external => external)
+      lines << "\n// External Reference" if external
+      lines << "\n#{loader_name}.register('#{package_id}', #{JSON.pretty_generate(desc)});\n"
+    end
+      
     def build(dst_path)
       begin
         require 'json'
@@ -22,15 +29,26 @@ module SC
       
       # emit a bundle definition for the current target
       loader_name = entry.target.config.module_loader
-      package_id = entry.manifest.package_id
-      desc = entry.manifest.bundle_info(:package_info => entry)
-      lines = []
-      lines << ";#{loader_name}.register('#{package_id}', #{JSON.pretty_generate(desc)});\n"
+      lines       = [';']
+      emit_package_info lines, loader_name, entry.manifest, false
+      
+      # emit a bundle definition for any dynamically required scripts as well
+      targets = entry.target.dynamic_required_targets({
+        :debug => entry.target.config.load_debug,  
+        :test  => entry.target.config.load_tests
+      })
+
+      targets ||= []
+      targets = targets.compact.uniq.reject { |t| t == entry.target }
+      targets.each do |t|
+        m = t.manifest_for(entry.manifest.variation)
+        emit_package_info lines, loader_name, m, true
+      end       
       
       # make sure all dependents are loaded into the global context if this
       # package is not module aware
-      if !entry.target.use_modules && desc['dependencies']
-        lines << "#{loader_name}.global('#{package_id}');\n"
+      if !entry.target.use_modules && !!(entry.manifest.bundle_info()['dependencies'])
+        lines << "#{loader_name}.global('#{entry.manifest.package_id}');\n"
       end
       
       if !entry.target.config.combine_javascript

@@ -376,7 +376,6 @@ module SC
     #
     def bundle_info(opts ={})
       
-      package_info_entry = opts[:package_info]
       bundle_info = {
         'name' => package_name,
         'version' => '~' # ruby build tools do not support semantic versioning
@@ -445,19 +444,6 @@ module SC
         
         bundle_info['dependencies'] = depends if depends.size>0
         
-        # expand to include dynamic required target and build bundle info 
-        # also
-        ## TODO: Handle dynamic required targets
-        # targets += target.dynamic_required_targets(t_opts) || []
-        # targets = targets.compact.uniq.reject { |t| t == target }
-        # if targets.size > 0
-        #   bundles = {}
-        #   targets.each do |t|
-        #     bundles[t.package_name] = 
-        #       t.manifest_for(self.variation).bundle_info(:depends => false)
-        #   end
-        #   bundle_info['packages'] = bundles
-        # end
       end
         
       return bundle_info
